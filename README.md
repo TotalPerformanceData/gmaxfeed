@@ -21,7 +21,7 @@ Live data streams also available are:
 - Live Progress: https://www.gmaxequine.com/downloads/GX-RP-00020%202019-02-15%20Gmax%20Race%20Live%20Progress%20Feed%20Specification.pdf
 
 Limitations:
-- Runners which don't finishe are usually not included due to current limitations in the software setup,
+- Runners which don't finish are usually not included due to current limitations in the software setup,
 - For some courses/distances the 'P' field doesn't decrease, this is a problem in the historic feed mapping to the route files but is usually not an issue in the live feed. We're working on fixing the issue.
 - Whip strikes can cause sudden spikes in the data, velocities hitting near 50m/s and skewing the X,Y way off the track, there's nothing we can do about this as the trackers are padded as much as the weight/size guidelines will allow.
 - We cannot distribute horse names due to licence limitations, we can only supply the sharecode with saddle cloth number appended.
