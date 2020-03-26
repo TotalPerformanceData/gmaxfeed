@@ -78,7 +78,6 @@ def getDaysRaces(licenceKey, date = False, courses = None, country = None, publi
 
 def getSectionals(licenceKey, sharecode):
     
-    dictData = dict()
     response = False
     idx = 0
     while True:
@@ -90,17 +89,8 @@ def getSectionals(licenceKey, sharecode):
             idx += 1
             if idx == 5:
                 break
-            
-    try:
-        data = json.load(response)
-        for k in data:
-            if k['I'] not in dictData:
-                dictData[k['I']] = []
-            dictData[k['I']].append(k)
-    except:
-        return {}
     
-    return dictData
+    return json.load(response)
 
 
 def getGPSData(licence, sharecode):
@@ -200,6 +190,11 @@ if __name__ == '__main__':
         os.mkdir(gpsPath)
     gpsContents = os.listdir(gpsPath)
     
+    secPath = 'sectionals'
+    if not os.path.exists(secPath):
+        os.mkdir(secPath)
+    secContents = os.listdir(secPath)
+
     racelistPath = 'racelist'
     if not os.path.exists(racelistPath):
         os.mkdir(racelistPath)
@@ -208,6 +203,7 @@ if __name__ == '__main__':
     sharecodes = list()
     #dt = datetime.today() - timedelta(days=round(8)) # if updating data for last week or so
     dt = datetime(2016,1,1) # if running for first time and want all data
+    
     while dt < datetime.today(): # post race points aren't available until a couple days after race usually
         date = dt.strftime('%Y-%m-%d')
         
@@ -223,20 +219,26 @@ if __name__ == '__main__':
         dt += timedelta(days=1)
     
     # for multiprocessing/threading to download faster;
-    #def save_file(row):
-    #    licence_key, sc = row
-    #    if sc not in gpsContents or os.stat(os.path.join(gpsPath, sc)).st_size < 100 or len(set([row['P'] for row in readGPS(os.path.join(gpsPath, sc))])) < 30: 
-    #        dataGps = getGPSData(licence_key, sc)
-    #        if dataGps:
-    #            with open(os.path.join(gpsPath, sc), 'w') as f:
-    #                json.dump(dataGps, f)
-    #import multiprocessing as mp
-    #with mp.Pool() as pool:
-    #    pool.map(save_file, [(licence_key, sc) for sc in sharecodes])
-    # don't really recommend it though as gmax server imposes fair use limits so making 4x more requests per second would make server deny the file, 
+    def save_file(row):
+        licence_key, sc = row
+        if sc not in gpsContents or os.stat(os.path.join(gpsPath, sc)).st_size < 100 or len(set([row['P'] for row in readGPS(os.path.join(gpsPath, sc))])) < 30: 
+            dataGps = getGPSData(licence_key, sc)
+            if dataGps:
+                with open(os.path.join(gpsPath, sc), 'w') as f:
+                    json.dump(dataGps, f)
+        if sc not in secContents:
+            dataSec = getSectionals(licence_key, sc)
+            if dataSec:
+                with open(os.path.join(secPath, sc), 'w') as f:
+                    json.dump(dataSec, f)
+                    
+    import multiprocessing as mp
+    with mp.Pool() as pool:
+        pool.map(save_file, [(licence_key, sc) for sc in sharecodes])
+    # don't really recommend it though as gmax server imposes fair use limits so making 4x more requests per second would make server block the request, 
     # and then would have to hope the time.sleep(1) retry... picks it up and doesn't cause an error after 5 retries.
-    # it'll take an hour or so to download the lot using a single process, but less liekly to miss a file is server temp-bans IP.
-    #
+    # it'll take an hour or so to download the lot using a single process, but less likely to miss a file if server issues a temporary IP ban.
+    r"""
     # single process;
     for sc in sharecodes:
         if sc not in gpsContents or os.stat(os.path.join(gpsPath, sc)).st_size < 100 or len(set([row['P'] for row in readGPS(os.path.join(gpsPath, sc))])) < 30: # last condition for server error where P field doesn't change through race sometimes
@@ -244,4 +246,9 @@ if __name__ == '__main__':
             if dataGps:
                 with open(os.path.join(gpsPath, sc), 'w') as f:
                     json.dump(dataGps, f)
-        
+        if sc not in secContents:
+            dataSec = getSectionals(licence_key, sc)
+            if dataSec:
+                with open(os.path.join(secPath, sc), 'w') as f:
+                    json.dump(dataSec, f)
+    """
