@@ -149,7 +149,7 @@ def updateRouteFiles(licence, us = False):
     route_folder = 'RouteFiles'
     if not os.path.exists(route_folder):
         os.mkdir(route_folder)
-    for cc in [3,4,6,11,12,14,17,19,23,24,30,35,37,40,43,46,47,53,57,58,59,61,64,71,72,73,74,75,76,77,78,79,80,90.91]:
+    for cc in [3,4,6,11,12,14,17,19,23,24,30,35,37,40,43,46,47,53,57,58,59,61,64,71,72,73,74,75,76,77,78,79,80,90,91]:
         if cc > 70 and not us:
             break
         cc = str(cc).zfill(2)
@@ -180,7 +180,8 @@ def getBearing(coords1, coords2):
     return np.arctan2(np.cos(lat1)*np.sin(lat2)-np.sin(lat1)*np.cos(lat2)*np.cos(lon2-lon1), np.sin(lon2-lon1)*np.cos(lat2))
 
 
-# when run, checks the previous week for published races, and checks/downloads GPS points feed
+# when run, checks the previous week for published races, and checks/downloads GPS points feed and sectionals
+# if licence key is only activated for one of the above feeds then comment out or remove lines for unauthorsied feed or will have folder full of 'Permission Denied' text files
 if __name__ == '__main__':
     
     licence_key = '' # paste gmax licence key in here
