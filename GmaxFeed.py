@@ -90,7 +90,10 @@ def getSectionals(licenceKey, sharecode):
             if idx == 5:
                 break
     
-    return json.load(response)
+    if response:
+        return json.load(response)
+    else:
+        return False
 
 
 def getGPSData(licence, sharecode):
@@ -108,9 +111,9 @@ def getGPSData(licence, sharecode):
             if idx == 5:
                 break
             
-    for line in response:
-        line = line.decode('utf-8')
-        data.append(json.loads(line))
+    if response:
+        lines = response.readlines()
+        data = [json.loads(line) for line in lines]
     
     return data
 
@@ -119,9 +122,9 @@ def getTrackTimeHistory(licence, sharecode):
     
     data = list()
     with urllib.request.urlopen('http://www.gmaxequine.com/TPD/client/sectionals-history.ashx?Sharecode=' + sharecode + '&k=' + licence) as response:
-        for line in response:
-            line = line.decode('utf-8')
-            data.append(json.loads(line))
+        if response:
+            lines = response.readlines()
+            data = [json.loads(line) for line in lines]
     
     return data
 
@@ -130,9 +133,9 @@ def getObstacleLocations(licence, sharecode):
     
     data = list()
     with urllib.request.urlopen('http://www.gmaxequine.com/TPD/client/jumps.ashx?Sharecode=' + sharecode + '&k=' + licence) as response:
-        for line in response:
-            line = line.decode('utf-8')
-            data.append(json.loads(line))
+        if response:
+            lines = response.readlines()
+            data = [json.loads(line) for line in lines]
     
     return data
 
