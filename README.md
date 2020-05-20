@@ -4,6 +4,8 @@ Python3 module for downloading files from gmax server and saving to local machin
 
 Any problems please let me know via email or comments. Currently when run as main it downloads all sectionals and gps points files, but if you're not set up for one then comment it out or you'll end up with a folder full of "Permission Denied" text. Daterange should also be set to your permissable daterange fo the same reason as RaceLists will be stored for each day which will just be an empty list if you're not activated for the date in query.
 
+Temporary IP bans are issued by the server when downloading masses of data, they only last a few seconds and if it breaks the __main__ script it can just be restarted and it'll use the downloaded daily racelist's to continue from where it left off.
+
 Requires an active licence key obtained by purchase from Total Performance Data, http://www.totalperformancedata.com/ .
 
 Feed Specifications below:
