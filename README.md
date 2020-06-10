@@ -26,3 +26,7 @@ Limitations:
 - Whip strikes can cause sudden spikes in the data, velocities hitting near 50m/s and skewing the X,Y way off the track, there's nothing we can do about this as the trackers are padded as much as the weight/size guidelines will allow.
 - We cannot distribute horse names due to licence limitations, we can only supply the sharecode with saddle cloth number appended.
 - Occaisionally the trackers suffer errors, usually due to very hard and direct whip strikes/kicks which disable them for some period of time and sometimes due to operator error. If the data cannot be recovered to an acceptable standard then the race is not published and there are no sectionals or points available for any of the runners. 
+
+RecordLiveTPD is a simple program to listen for incoming live data and save them to a file system based on the sharecodes within the packets. Change directory to gmaxfeed, then run "python3 RecordLiveTPD.py", this can be tested using Packet Sender app by sending packets to 127.0.0.1:4629, then exited by input of 't' (for terminate). An example test packet from the Progress feed to use in packet sender is below:
+{"K":5,"T":"2020-03-15T21:02:03.0Z","I":"00202003151552","G":"4.5f","S":5.35,"C":16.49,"R":17.96,"V":18.5,"P":877.9,"O":["5","3","6","2","4","7"],"F":["4","7","5","3","2","6"],"B":[0,6.1,13.7,14.6,16.8,19.5]}
+
