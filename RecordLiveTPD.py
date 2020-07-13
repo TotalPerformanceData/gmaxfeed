@@ -3,7 +3,7 @@
 Created on Thu Jul 18 09:29:47 2019
 Use 2 processes, 1 to listen to updates and 1 to save files.
 in P1, use 2 threads, 1 for userTerminate class and 1 for socket.listen() to add packet to queue.
-in P2, use threads to save packets from queue
+in P2, dequeue and save packets
 @author: GSwindells
 """
 import socket, threading, csv, json, sys, logging, os
@@ -20,7 +20,7 @@ del ch
 if not os.path.exists("TPDLiveRecording"):
     os.mkdir("TPDLiveRecording")
 
-# to terminate user can input 't' which causes a more graceful exit
+# to terminate user can input 't' for a more graceful exit
 class UserTerminate:
     
     def userTerminate(self):
@@ -48,17 +48,9 @@ def fileManagement(q): # function for secondary file management process, input o
         try:
             data2 = json.loads(data)
         except Exception:
-            logger("Encountered json.loads() error: %s - %s - %s " (data, address, ts))
+            logger.exception("Encountered json.loads() error: %s - %s - %s ", (data, address, ts))
             return
-        
-        if data2['K'] == 0:
-            if (datetime.strptime(data2['I'][2:-2], "%Y%m%d%H%M") - timedelta(hours=0, minutes = 1, seconds=30)) <= datetime.utcnow():
-                ### when suitable data received
-                fileSave(data, str(ts), data2['I'])
-        elif data2['K'] == 5:
-            if (datetime.strptime(data2['I'][2:], "%Y%m%d%H%M") - timedelta(hours=0, minutes = 1, seconds=30)) <= datetime.utcnow():
-                ### when suitable data received
-                fileSave(data, str(ts), data2['I'])
+        fileSave(data, str(ts), data2['I'])
             
     while True:
         d = q.get() # get data from front of queue, wait indefinitely
@@ -69,7 +61,7 @@ def fileManagement(q): # function for secondary file management process, input o
             print(repr(d[0]))
             data = d[0].decode('ascii')
         except Exception: # any exception will only be from decode if some unexpected data is received to port
-            logger.exception(' %s - %s' % (str(d), str(tReceived)))
+            logger.exception(' %s - %s', (str(d), str(tReceived)))
             continue
         
         dealWithDatagram(data, d[1], tReceived)
