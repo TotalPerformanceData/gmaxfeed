@@ -9,6 +9,10 @@ import urllib, json, os, time
 from datetime import datetime, timedelta
 
 
+def listdir2(fol):
+    return [f for f in os.listdir(fol) if not f.startswith('.')]
+
+
 def readUrl(url = False):
     txt = False
     if url:
@@ -76,6 +80,33 @@ def getDaysRaces(licenceKey, date = False, courses = None, country = None, publi
     return dictData
 
 
+def update_racelist(licence_key:str, start_date:datetime, end_date=None, direc='./racelist', force_overwrite=False):
+    # update the contents of the racelist folder if the modification time of the file is younger than 5 days after day's date. 
+    # races are published up to a few days after the race, so to be more sure about which races are available to download 
+    # need the latest version of the racelist for the day (without spamming old racelists that are really unlikely to change)
+    
+    files = set(listdir2(direc))
+    
+    if end_date is None or end_date < start_date:
+        end_date = datetime.utcnow() - timedelta(days=1)
+    
+    while start_date < end_date: # post race points aren't available until a couple days after race usually
+        date = start_date.strftime('%Y-%m-%d')
+        path = os.path.join(direc, date)
+        if date not in files:
+            temp = getDaysRaces(licence_key, date=date, published = None)
+            with open(path, 'w') as f:
+                json.dump(temp, f)
+        else:
+            mtime = datetime.fromtimestamp(os.path.getmtime(path))
+            if force_overwrite or mtime < start_date + timedelta(days=5): # file was created on the same week, might have missed later races or publish change so get a replacement
+                temp = getDaysRaces(licence_key, date=date, published = None)
+                with open(path, 'w') as f:
+                    json.dump(temp, f)
+                    
+        start_date += timedelta(days=1)
+
+        
 def getSectionals(licenceKey, sharecode):
     
     response = False
@@ -152,7 +183,7 @@ def updateRouteFiles(licence, us = False):
     route_folder = 'RouteFiles'
     if not os.path.exists(route_folder):
         os.mkdir(route_folder)
-    for cc in [3,4,6,11,12,14,17,19,23,24,30,35,37,40,43,46,47,53,57,58,59,61,64,71,72,73,74,75,76,77,78,79,80,90,91]:
+    for cc in [1,3,4,6,11,12,14,17,19,23,24,30,35,37,40,43,46,47,53,57,58,59,61,64,71,72,73,74,75,76,77,78,79,80,81,82,90,91]:
         if cc > 70 and not us:
             break
         cc = str(cc).zfill(2)
@@ -192,40 +223,44 @@ if __name__ == '__main__':
     gpsPath = 'gpsData'
     if not os.path.exists(gpsPath):
         os.mkdir(gpsPath)
-    gpsContents = os.listdir(gpsPath)
+    gpsContents = set(os.listdir(gpsPath))
     
     secPath = 'sectionals'
     if not os.path.exists(secPath):
         os.mkdir(secPath)
-    secContents = os.listdir(secPath)
+    secContents = set(os.listdir(secPath))
 
     racelistPath = 'racelist'
     if not os.path.exists(racelistPath):
         os.mkdir(racelistPath)
-    racelistContents = os.listdir(racelistPath)
     
     sharecodes = list()
-    #dt = datetime.today() - timedelta(days=round(8)) # if updating data for last week or so
-    dt = datetime(2016,1,1) # if running for first time and want all data
+    #dt = datetime(2016,1,1) # if running for first time and want all data
+    dt = datetime.today() - timedelta(days=round(7)) # if updating data for last week or so
     
-    while dt < datetime.today(): # post race points aren't available until a couple days after race usually
+    update_racelist(licence_key, start_date=dt)
+    racelistContents = set(os.listdir(racelistPath))
+    
+    while dt < datetime.today()-timedelta(days=1): # post race points aren't available until a couple days after race usually
         date = dt.strftime('%Y-%m-%d')
         
         if date not in racelistContents:
-            temp = getDaysRaces(licence_key, date=date, published = True)
+            temp = getDaysRaces(licence_key, date=date, published = None)
             with open(os.path.join(racelistPath, date), 'w') as f:
                 json.dump(temp, f)
         else:
             with open(os.path.join(racelistPath, date), 'r') as f:
                 temp = json.load(f)
-                
-        sharecodes.extend(list(temp.keys()))
+        
+        for sc in temp:
+            if temp[sc]['Published']:
+                sharecodes.add(sc)
         dt += timedelta(days=1)
     
     # for multiprocessing/threading to download faster;
     def save_file(row):
         licence_key, sc = row
-        if sc not in gpsContents or os.stat(os.path.join(gpsPath, sc)).st_size < 100 or len(set([row['P'] for row in readGPS(os.path.join(gpsPath, sc))])) < 30: 
+        if sc not in gpsContents or os.stat(os.path.join(gpsPath, sc)).st_size < 100: # or len(set([row['P'] for row in readGPS(os.path.join(gpsPath, sc))])) < 30: 
             dataGps = getGPSData(licence_key, sc)
             if dataGps:
                 with open(os.path.join(gpsPath, sc), 'w') as f:
@@ -236,16 +271,19 @@ if __name__ == '__main__':
                 with open(os.path.join(secPath, sc), 'w') as f:
                     json.dump(dataSec, f)
                     
-    import multiprocessing as mp
-    with mp.Pool() as pool:
+    #import multiprocessing as mp
+    from multiprocessing.pool import ThreadPool
+    #with mp.Pool() as pool:
+    # ThreadPool is a nifty tool which is similar to mp.Pool but uses threads in one process. Not well documented and strange that it's in mp but useful here
+    with ThreadPool(4) as pool:
         pool.map(save_file, [(licence_key, sc) for sc in sharecodes])
-    # don't really recommend it though as gmax server imposes fair use limits so making 4x more requests per second would make server block the request, 
+    # gmax server imposes fair use limits so making 4x more requests per second would make server block the request, 
     # and then would have to hope the time.sleep(1) retry... picks it up and doesn't cause an error after 5 retries.
-    # it'll take an hour or so to download the lot using a single process, but less likely to miss a file if server issues a temporary IP ban.
+    # it'll take an hour or so to download the lot using multithreads process, maybe longer for 10Hz. might be something to leave overnight
     r"""
     # single process;
     for sc in sharecodes:
-        if sc not in gpsContents or os.stat(os.path.join(gpsPath, sc)).st_size < 100 or len(set([row['P'] for row in readGPS(os.path.join(gpsPath, sc))])) < 30: # last condition for server error where P field doesn't change through race sometimes
+        if sc not in gpsContents or os.stat(os.path.join(gpsPath, sc)).st_size < 100 or len(set([row['P'] for row in readGPS(os.path.join(gpsPath, sc))])) < 30: # last condition for server error where P field doesn't change through race sometimes, only occaisional now for jumps races
             dataGps = getGPSData(licence_key, sc)
             if dataGps:
                 with open(os.path.join(gpsPath, sc), 'w') as f:
