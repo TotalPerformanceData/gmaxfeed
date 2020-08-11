@@ -47,7 +47,7 @@ def fileManagement(q): # function for secondary file management process, input o
         try:
             data2 = json.loads(data)
         except Exception:
-            logger.exception("Encountered json.loads() error: %s - %s - %s ", (data, address, ts))
+            logger.exception("Encountered json.loads() error: %s - %s - %s ", data, address, ts)
             return
         fileSave(data, str(ts), data2['I'])
             
@@ -60,7 +60,7 @@ def fileManagement(q): # function for secondary file management process, input o
             print(repr(d[0]))
             data = d[0].decode('ascii')
         except Exception: # any exception will only be from decode if some unexpected data is received to port
-            logger.exception(' %s - %s', (str(d), str(tReceived)))
+            logger.exception(' %s - %s', str(d), str(tReceived))
             continue
         
         dealWithDatagram(data, d[1], tReceived)
