@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 ch = logging.StreamHandler()
 ch.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 logger.addHandler(ch)
-del ch
 
 if not os.path.exists("TPDLiveRecording"):
     os.mkdir("TPDLiveRecording")
@@ -75,6 +74,7 @@ if __name__ == '__main__':
         ut = UserTerminate()
         x = threading.Thread(target = ut.userTerminate)
         x.start()
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind(('',4629)) #(HOST='', PORT=4629)
         while True:
             ### wait for data received...
