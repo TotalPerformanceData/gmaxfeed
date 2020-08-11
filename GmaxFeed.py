@@ -234,7 +234,7 @@ if __name__ == '__main__':
     if not os.path.exists(racelistPath):
         os.mkdir(racelistPath)
     
-    sharecodes = list()
+    sharecodes = set()
     #dt = datetime(2016,1,1) # if running for first time and want all data
     dt = datetime.today() - timedelta(days=round(7)) # if updating data for last week or so
     
