@@ -304,4 +304,4 @@ if __name__ == '__main__':
                 with open(os.path.join(secPath, sc), 'w') as f:
                     json.dump(dataSec, f)
     """
-    data = load_all_sectionals()
+    #data = load_all_sectionals() # if you want to export everything to an xls file can do so here, subset by daterange start_date and end_date available. might add similar to split S Sl and SF onto different sheets but the context can get lost without the times.
