@@ -6,10 +6,18 @@ Created on Fri Jun  7 11:48:33 2019
 @email: george.swindells@totalperformancedata.com
 """
 
-from Utils import listdir2, readUrl, logger, export_sectionals_to_xls
+from Utils import listdir2, logger, export_sectionals_to_xls
 import urllib, json, os, time, dateutil
 from datetime import datetime, timedelta
 
+def readUrl(url = False):
+    txt = False
+    if url:
+        try:
+            txt = urllib.request.urlopen(url)
+        except:
+            txt = False
+    return txt
 
 def getDaysRaces(licenceKey, date = False, courses = None, country = None, published = None):
     
