@@ -6,33 +6,109 @@ Created on Fri Oct 6 2020
 @email: george.swindells@totalperformancedata.com
 """
 
-import os, urllib
+import os, dateutil, requests, time, json, concurrent
 import numpy as np
 import pandas as pd
-import dateutil
 from loguru import logger
 
-logger.add('log.log')
+MAX_THREADS = 6
+
+logger.add('utils.log', level='INFO', format="{time} {level} {message}")
 
 HEADERS_ = {
         '1': ['Finish', '1f', '2f', '3f', '4f', '5f', '6f', '7f', '8f', '9f', '10f', '11f', '12f', '13f', '14f', '15f', '16f', '17f', '18f', '19f', '20f', '21f', '22f', '23f', '24f', '25f', '26f', '27f', '28f', '29f', '30f', '31f', '32f', '33f', '34f']
         }
-    
+
 def listdir2(fol:str) -> list:
     return [f for f in os.listdir(fol) if not f.startswith('.')]
 
 def _gate_num(x:str) -> float:
     return float(x.replace('f','').replace('Finish','0').replace('F',''))
 
-def readUrl(url = False):
+def read_json(path:str) -> list:
+    data = None
+    if os.path.exists(path):
+        with open(path, 'r') as file:
+            data = json.load(file)
+    return data
+
+def reformat_sectionals_list(data:list) -> dict:
+    # reformat list of dictionaries into dictionary of runners:{gate:{data}, date2:{data},...}
+    runners = sorted(list(set([row['I'] for row in data])))
+    d = {runner:{} for runner in runners}
+    for runner in runners:
+        d[runner] = {row['G']:row for row in data if row['I']==runner}
+    return d
+
+def reformat_gps_list(data:list, by:str='T') -> dict:
+    # by either 'T' or 'I'
+    # reformat list of dictionaries into dictionary of {runner1:{timestamp1:{data}, timestamp2:{data}, ...}, ...} or {timestamp1:{runner1:{data}, runner2:{data}, ...}, timestamp2:{...}, ...}
+    a = 'I' if by == 'T' else 'T'
+    heads = sorted(list(set([row[by] for row in data])))
+    d = {key:{} for key in heads}
+    for key in heads:
+        d[key] = {row[a]:row for row in data if row[by]==key}
+    return d
+
+def load_file(direc:str, fname:str) -> dict or None:
+    path = os.path.join(direc, fname)
+    if os.path.exists(path):
+        data = read_json(path)
+    else:
+        data = None
+    return data
+
+def dump_file(data:dict, direc:str, fname:str) -> None:
+    path = os.path.join(direc, fname)
+    with open(path, 'w') as f:
+        json.dump(data, f)
+
+def process_url_response(url:str, direc:str, fname:str, version:int = 1) -> dict:
+    # little helper to cut down on repeated code. version 1 stores as is, version 2 reformats to make I the index, version 3 for converting invalid json format to valid json list of dicts for storage.
+    txt = read_url(url)
+    if txt:
+        if version == 1:
+            data = json.loads(txt)
+        elif version == 2:
+            data = {row['I']:row for row in json.loads(txt)}
+        elif version == 3:
+            data = [json.loads(row) for row in txt if len(row) > 5]
+        else:
+            data = txt
+    else:
+        data = {}
+    dump_file(data = data, direc = direc, fname = fname)
+    return data
+
+def read_url(url:str = False, try_limit:int = 3) -> str or False:
+    if not url:
+        return False
     txt = False
-    if url:
+    idx = 0
+    while idx != try_limit:
         try:
-            txt = urllib.request.urlopen(url, timeout=5)
+            with requests.get(url, timeout=5) as response:
+                txt = response.text
+                if txt == "Permission Denied":
+                    txt = False
+            break
         except Exception:
-            logger.exception('url error')
-            txt = False
+            logger.exception('url error - {0}'.format(url))
+            time.sleep(2)
+            idx += 1
     return txt
+
+def apply_thread_pool(func, iterable, new=False) -> list:
+    threads = min([MAX_THREADS, len(iterable)])
+    if threads > 1:
+        with concurrent.futures.ThreadPoolExecutor(threads) as pool:
+            results = [pool.submit(func, x, new) for x in iterable]
+        results = [res.result() for res in results]
+    elif iterable:
+        results = [func(x, new) for x in iterable]
+    else:
+        results = []
+    return results
 
 def _compute_derivatives(data:dict, race_length:float) -> dict:
     average_sl = np.sum([gate['D'] for gate in data.values()]) / np.sum([gate['N'] for gate in data.values() if 'N' in gate and gate['D'] > 0])
@@ -101,8 +177,7 @@ def export_sectionals_to_xls(sharecodes:dict) -> None:
     df = pd.DataFrame.from_dict(data, 'index')
     df.to_excel('tpd_sectionals.xlsx')
     return data
-    
-    
+
 def haversine(x1:np.ndarray, x2:np.ndarray, y1:np.ndarray, y2:np.ndarray) -> np.ndarray:
     # input in degrees, arrays or numbers. Compute haversine distance between coords (x1, y1) and (x2, y2)
     x1 = np.deg2rad(x1)
