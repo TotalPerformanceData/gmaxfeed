@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Fri Jun  7 11:48:33 2019
@@ -28,22 +29,23 @@ Windows:
 """
 
 import os, dateutil
-from Utils import listdir2, read_json, reformat_sectionals_list, reformat_gps_list, export_sectionals_to_xls, load_file, process_url_response, apply_thread_pool
+_dir = os.path.abspath(os.path.dirname(__file__))
+from .Utils import listdir2, read_json, reformat_sectionals_list, reformat_gps_list, export_sectionals_to_xls, load_file, process_url_response, apply_thread_pool
 from datetime import datetime, timedelta, timezone
 from loguru import logger
 
 r"""
-os.environ['RACELIST_PATH'] = 'path/to/racelist'
-os.environ['SEC_PATH'] = 'path/to/sectionals'
-os.environ['GPS_PATH'] = 'path/to/gpsData'
-os.environ['SEC_HIST_PATH'] = 'path/to/sectionals-hist'
-os.environ['SEC_RAW_PATH'] = 'path/to/sectionals-raw'
-os.environ['ROUTE_PATH'] = 'path/to/routes'
-os.environ['JUMPS_PATH'] = 'path/to/jumps'
+os.environ['RACELIST_PATH'] = '/home/tpd/webviewer4/racelist'
+os.environ['SEC_PATH'] = '/home/tpd/webviewer4/sectionals'
+os.environ['GPS_PATH'] = '/home/tpd/webviewer4/gpsData'
+os.environ['SEC_HIST_PATH'] = '/home/tpd/webviewer4/sectionals-hist'
+os.environ['SEC_RAW_PATH'] = '/home/tpd/webviewer4/sectionals-raw'
+os.environ['ROUTE_PATH'] = '/home/tpd/webviewer4/routes'
+os.environ['JUMPS_PATH'] = '/home/tpd/webviewer4/jumps'
 os.environ['GMAXLICENCE'] = 'my_licence'
 """
 
-logger.add('PostraceFeed.log', level='INFO', format="{time} {level} {message}")
+logger.add(os.path.join(_dir, 'PostraceFeed.log'), level='INFO', format="{time} {level} {message}")
 
 
 class RaceMetadata:
@@ -470,7 +472,7 @@ class TPDFeed(GmaxFeed):
 # when run, checks the previous week for published races, and checks/downloads GPS points feed and sectionals
 if __name__ == '__main__':
     
-    start_date = datetime.now(tz = timezone.utc) - timedelta(days = 7)
+    start_date = datetime.now(tz = timezone.utc) - timedelta(days = 3)
     end_date = datetime.now(tz = timezone.utc) - timedelta(days = 1)
     
     filter = RaceMetadata()

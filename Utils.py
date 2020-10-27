@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Fri Oct 6 2020
@@ -72,7 +73,7 @@ def process_url_response(url:str, direc:str, fname:str, version:int = 1) -> dict
         elif version == 2:
             data = {row['I']:row for row in json.loads(txt)}
         elif version == 3:
-            data = [json.loads(row) for row in txt if len(row) > 5]
+            data = [json.loads(row) for row in txt.splitlines() if len(row) > 5]
         else:
             data = txt
     else:
