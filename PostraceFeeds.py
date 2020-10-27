@@ -29,7 +29,10 @@ Windows:
 """
 
 import os, dateutil
+<<<<<<< ours
 _dir = os.path.abspath(os.path.dirname(__file__))
+=======
+>>>>>>> theirs
 from .Utils import listdir2, read_json, reformat_sectionals_list, reformat_gps_list, export_sectionals_to_xls, load_file, process_url_response, apply_thread_pool
 from datetime import datetime, timedelta, timezone
 from loguru import logger
