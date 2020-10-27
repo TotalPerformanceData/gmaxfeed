@@ -35,13 +35,13 @@ from datetime import datetime, timedelta, timezone
 from loguru import logger
 
 r"""
-os.environ['RACELIST_PATH'] = '/home/tpd/webviewer4/racelist'
-os.environ['SEC_PATH'] = '/home/tpd/webviewer4/sectionals'
-os.environ['GPS_PATH'] = '/home/tpd/webviewer4/gpsData'
-os.environ['SEC_HIST_PATH'] = '/home/tpd/webviewer4/sectionals-hist'
-os.environ['SEC_RAW_PATH'] = '/home/tpd/webviewer4/sectionals-raw'
-os.environ['ROUTE_PATH'] = '/home/tpd/webviewer4/routes'
-os.environ['JUMPS_PATH'] = '/home/tpd/webviewer4/jumps'
+os.environ['RACELIST_PATH'] = '/path/to/racelist'
+os.environ['SEC_PATH'] = '/path/to/sectionals'
+os.environ['GPS_PATH'] = '/path/to/gpsData'
+os.environ['SEC_HIST_PATH'] = '/path/to/sectionals-hist'
+os.environ['SEC_RAW_PATH'] = '/path/to/sectionals-raw'
+os.environ['ROUTE_PATH'] = '/path/to/routes'
+os.environ['JUMPS_PATH'] = '/path/to/jumps'
 os.environ['GMAXLICENCE'] = 'my_licence'
 """
 
