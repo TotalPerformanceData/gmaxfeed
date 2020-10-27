@@ -29,11 +29,12 @@ Windows:
 """
 
 import os, dateutil
-<<<<<<< ours
 _dir = os.path.abspath(os.path.dirname(__file__))
-=======
->>>>>>> theirs
-from .Utils import listdir2, read_json, reformat_sectionals_list, reformat_gps_list, export_sectionals_to_xls, load_file, process_url_response, apply_thread_pool
+# TODO will tidy this up with a main.py entry point to run instead of running this as main to get daily updates 
+if __name__ == '__main__':
+    from Utils import listdir2, read_json, reformat_sectionals_list, reformat_gps_list, export_sectionals_to_xls, load_file, process_url_response, apply_thread_pool
+else:
+    from .Utils import listdir2, read_json, reformat_sectionals_list, reformat_gps_list, export_sectionals_to_xls, load_file, process_url_response, apply_thread_pool
 from datetime import datetime, timedelta, timezone
 from loguru import logger
 
