@@ -339,7 +339,7 @@ class GmaxFeed:
     def get_obstacles(self, sharecode:str, new:bool = False) -> dict:
         metadata = self.get_racelist(sharecode = sharecode)
         if metadata is False or 'RaceType' not in metadata or not any([x in metadata.get('RaceType') for x in ['Hurdle', 'Chase', 'NH Flat']]):
-            return {'sc':sharecode, 'data':False}
+            return {'sc':sharecode, 'data':[]}
         if not new:
             data = load_file(direc = self._jumps_path, fname = sharecode)
             if data is not None:
