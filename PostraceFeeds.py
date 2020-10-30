@@ -62,18 +62,21 @@ class RaceMetadata:
         self.import_data(data = data, direc = direc)
         self._filter = {}
     
-    def __iter__(self):
+    def __iter__(self) -> str:
         r"""
         iterate the values which passed the filter parameters, returning tuple of (key, value).
         Be careful not to make changes to the items in the dict as the keys in self._list and self._data actually point to the same place 
         """
         yield from self._list.keys()
     
+    def __len__(self) -> int:
+        return len(self._list)
+    
     def __repr__(self) -> str:
         return "< RaceMetadata - Races:{0} >".format(len(self._data))
     
-    def set_filter(self, countries:list or set = None, courses:list or set = None, course_codes:list or set = None, published:bool = None, start_date:datetime or str = None, end_date:datetime or str = None) -> None:
-        self._filter = {'countries':countries, 'courses':courses, 'course_codes':course_codes, 'published':published, 'start_date':start_date, 'end_date':end_date}
+    def set_filter(self, countries:list or set = None, courses:list or set = None, course_codes:list or set = None, published:bool = None, start_date:datetime or str = None, end_date:datetime or str = None, race_types:list or set = None) -> None:
+        self._filter = {'countries':countries, 'courses':courses, 'course_codes':course_codes, 'published':published, 'start_date':start_date, 'end_date':end_date, 'race_types':race_types}
     
     def get(self, sharecode:str) -> dict or None:
         return self._data.get(sharecode)
@@ -105,7 +108,7 @@ class RaceMetadata:
                 for row in data.values():
                     self._data[row['I']] = row
     
-    def get_set(self, countries:bool = True, courses:bool = True, course_codes:bool = True) -> dict:
+    def get_set(self, countries:bool = True, courses:bool = True, course_codes:bool = True, race_types:bool = True) -> dict:
         r"""
         get a set of all possible values within self._data for the given fields, and return as dictionary of sets.
         Useful for passing "everything except" conditions to filter, eg, for all courses except Ascot Newcastle and Bath,
@@ -118,9 +121,11 @@ class RaceMetadata:
             output['courses'] = set([sc.get('Racecourse') for sc in self._data.values()])
         if course_codes:
             output['course_codes'] = set([sc[:2] for sc in self._data]) # assumes first two chars are the course code, might change in later years
+        if race_types:
+            output['race_types'] = set([sc.get('RaceType') for sc in self._data.values()]) # assumes first two chars are the course code, might change in later years
         return output
     
-    def apply_filter(self, countries:list or set = None, courses:list or set = None, course_codes:list or set = None, published:bool = None, start_date:datetime or str = None, end_date:datetime or str = None) -> None:
+    def apply_filter(self, countries:list or set = None, courses:list or set = None, course_codes:list or set = None, published:bool = None, start_date:datetime or str = None, end_date:datetime or str = None, race_types:list or set = None) -> None:
         r"""
         filter the sharecodes within self._data by the given conditions. passing sets will be much faster if giving long lists of options.
         courses = ['Ascot', 'Newcastle', 'Lingfield Park'] # if courses is not None, only include entry if the course of the record is in the given list or set
@@ -133,14 +138,18 @@ class RaceMetadata:
         countries = countries or self._filter.get('countries')
         courses = courses or self._filter.get('courses')
         course_codes = course_codes or self._filter.get('course_codes')
+        race_types = race_types or self._filter.get('race_types')
         published = published or self._filter.get('published')
         start_date = start_date or self._filter.get('start_date')
         end_date = end_date or self._filter.get('end_date')
-        if all([x is None for x in [countries, courses, course_codes, published, start_date, end_date]]):
+        if all([x is None for x in [countries, courses, course_codes, published, start_date, end_date, race_types]]):
             self._list = self._data
         else:
             self._list = {}
             for sc, row in self._data.items():
+                if race_types is not None:
+                    if row['RaceType'] not in race_types:
+                        continue
                 if countries is not None:
                     if row['Country'] not in countries:
                         continue
@@ -476,7 +485,7 @@ class TPDFeed(GmaxFeed):
 # when run, checks the previous week for published races, and checks/downloads GPS points feed and sectionals
 if __name__ == '__main__':
     
-    start_date = datetime.now(tz = timezone.utc) - timedelta(days = 3)
+    start_date = datetime.now(tz = timezone.utc) - timedelta(days = 30)
     end_date = datetime.now(tz = timezone.utc) - timedelta(days = 1)
     
     filter = RaceMetadata()
