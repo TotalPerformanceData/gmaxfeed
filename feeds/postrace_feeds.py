@@ -5,6 +5,8 @@ Created on Fri Jun  7 11:48:33 2019
 
 Aesthetic class for requesting data from the gmax API.
 RaceMetadata can be used for filtering the sharecodes
+Keep up to date using update function, either by running gmaxfeed/main_update.py or scheduling update() in other applications.
+Don't run this as main as imports don't work then.
 
 Gmax Licence can be hard coded in GmaxFeed in line 90, or more preferably set as an environment variable either by placing 
 inserting lines of definitions after the imports as indicated on lines 34 to 43 (commented out) or more preferably still by 
@@ -30,13 +32,10 @@ Windows:
 
 import os, dateutil
 _dir = os.path.abspath(os.path.dirname(__file__))
-# TODO will tidy this up with a main.py entry point to run instead of running this as main to get daily updates 
-if __name__ == '__main__':
-    from Utils import listdir2, read_json, reformat_sectionals_list, reformat_gps_list, export_sectionals_to_xls, load_file, process_url_response, apply_thread_pool
-else:
-    from .Utils import listdir2, read_json, reformat_sectionals_list, reformat_gps_list, export_sectionals_to_xls, load_file, process_url_response, apply_thread_pool
+_par_dir, _ = os.path.split(_dir)
+
+from .Utils import listdir2, read_json, reformat_sectionals_list, reformat_gps_list, export_sectionals_to_xls, load_file, process_url_response, apply_thread_pool
 from datetime import datetime, timedelta, timezone
-from loguru import logger
 
 r"""
 os.environ['RACELIST_PATH'] = '/path/to/racelist'
@@ -49,7 +48,8 @@ os.environ['JUMPS_PATH'] = '/path/to/jumps'
 os.environ['GMAXLICENCE'] = 'my_licence'
 """
 
-logger.add(os.path.join(_dir, 'PostraceFeed.log'), level='INFO', format="{time} {level} {message}")
+from loguru import logger
+logger.add(os.path.join(_par_dir, 'logs', 'postrace_feeds.log'), level='INFO', format="{time} {level} {message}")
 
 
 class RaceMetadata:
@@ -247,7 +247,7 @@ class GmaxFeed:
         
     def get_licence(self) -> str or None:
         return os.environ.get("GMAXLICENCE")
-    
+    # TODO support an "offline" flag for only using local files regardless of age 
     def get_racelist(self, date:str or datetime = None, new:bool = False, sharecode:str = None) -> dict:
         r"""
         datestr format is '%Y-%m-%d'
@@ -412,7 +412,7 @@ class GmaxFeed:
             filter = RaceMetadata()
             filter.set_filter(published = True)
         _apply_filter(sharecodes = sharecodes, filter = filter) # in place
-        sharecodes = list(filter) # return keys from filter._list, post filtered
+        sharecodes = {sc:filter.get(sc) for sc in filter} # return keys from filter._list, post filtered
         sects = self.get_data(sharecodes = sharecodes, request = {'sectionals'}).get('sectionals')
         for sc in sects:
             sharecodes[sc]['sectionals'] = reformat_sectionals_list(sects[sc])
@@ -482,15 +482,24 @@ class TPDFeed(GmaxFeed):
         self._confirm_exists(self._average_times)
 
 
-# when run, checks the previous week for published races, and checks/downloads GPS points feed and sectionals
-if __name__ == '__main__':
+def update(start_date:datetime or str = None, end_date:datetime or str = None, request:set = {'sectionals', 'points'}, filter:RaceMetadata = None) -> None:
+    if start_date is None:
+        start_date = datetime.now(tz = timezone.utc) - timedelta(days = 14)
+    elif type(start_date) == str:
+        start_date = dateutil.parser.parse(start_date)
+    if start_date.tzinfo is None or start_date.tzinfo.utcoffset(start_date) is None:
+        start_date = start_date.replace(tzinfo = timezone.utc)
+    if end_date is None:
+        end_date = datetime.now(tz = timezone.utc) - timedelta(days = 1)
+    elif type(end_date) == str:
+        end_date = dateutil.parser.parse(end_date)
+    if end_date.tzinfo is None or end_date.tzinfo.utcoffset(end_date) is None:
+        end_date = end_date.replace(tzinfo = timezone.utc)
     
-    start_date = datetime.now(tz = timezone.utc) - timedelta(days = 30)
-    end_date = datetime.now(tz = timezone.utc) - timedelta(days = 1)
-    
-    filter = RaceMetadata()
-    filter.set_filter(published = True)
+    if filter is None:
+        filter = RaceMetadata()
+        filter.set_filter(published = True)
     gmax_feed = GmaxFeed()
-    gmax_feed.update(start_date = start_date, end_date = end_date, request = {'sectionals', 'points'}, filter = filter)
+    gmax_feed.update(start_date = start_date, end_date = end_date, request = request, filter = filter)
     
     

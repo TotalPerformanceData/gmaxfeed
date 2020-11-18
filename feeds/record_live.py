@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Thu Jul 18 09:29:47 2019
@@ -6,18 +7,19 @@ in P1, use 2 threads, 1 for userTerminate class and 1 for socket.listen() to add
 in P2, dequeue and save packets
 @author: GSwindells
 """
-import socket, threading, csv, json, sys, logging, os
+import socket, threading, json, os
 import multiprocessing as mp
 from datetime import datetime, timedelta
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-ch = logging.StreamHandler()
-ch.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-logger.addHandler(ch)
+_dir = os.path.abspath(os.path.dirname(__file__))
+DIREC = os.path.join(_dir, "TPDLiveRecording")
+if not os.path.exists(DIREC):
+    os.mkdir(DIREC)
 
-if not os.path.exists("TPDLiveRecording"):
-    os.mkdir("TPDLiveRecording")
+_par_dir, _ = os.path.split(_dir)
+from loguru import logger
+logger.add(os.path.join(_par_dir, 'logs', 'live_recording.log'), level='INFO', format="{time} {level} {message}")
+
 
 # to terminate user can input 't' for a more graceful exit
 class UserTerminate:
@@ -40,14 +42,14 @@ class UserTerminate:
 def fileManagement(q): # function for secondary file management process, input of queue
     
     def fileSave(data, tstamp, sc):
-        with open(os.path.join("TPDLiveRecording", sc), 'a', newline = '\r\n') as wfile:
+        with open(os.path.join(DIREC, sc), 'a', newline = '\r\n') as wfile:
             wfile.write(tstamp + ';' + data)
     
     def dealWithDatagram(data, address, ts):
         try:
             data2 = json.loads(data)
         except Exception:
-            logger.exception("Encountered json.loads() error: %s - %s - %s ", data, address, ts)
+            logger.exception("Encountered json.loads() error: {0} - {1} - {2} ".format(data, address, ts))
             return
         fileSave(data, str(ts), data2['I'])
             
@@ -60,7 +62,7 @@ def fileManagement(q): # function for secondary file management process, input o
             print(repr(d[0]))
             data = d[0].decode('ascii')
         except Exception: # any exception will only be from decode if some unexpected data is received to port
-            logger.exception(' %s - %s', str(d), str(tReceived))
+            logger.exception(' {0} - {1}'.format(str(d), str(tReceived)))
             continue
         
         dealWithDatagram(data, d[1], tReceived)

@@ -8,11 +8,12 @@ test the GmaxFeed functions
 @author: George
 """
 
-from PostraceFeeds import GmaxFeed, RaceMetadata
+import os
+from feeds.postrace_feeds import GmaxFeed, RaceMetadata
 from datetime import datetime, timezone
 from loguru import logger
 
-logger.add('test.log', level='DEBUG', format="{time} {level} {message}")
+logger.add(os.path.join('logs', 'test.log'), level='DEBUG', format="{time} {level} {message}")
 
 # set all paths here or make sure environ variable correctly set
 gmax_feed = GmaxFeed()
@@ -43,7 +44,7 @@ if __name__ == '__main__':
     try:
         # should return a RaceMetadata object, if filter with some restrictions are applied then len(filter._data) != len(filter._list)
         filter = test_filter()
-        print(len(filter._data), len(filter._list))
+        print("all_data length: {0}, filtered length: {1}".format(len(filter._data), len(filter._list)))
     except Exception:
         logger.exception('Error in racelist range generation')
         

@@ -8,13 +8,15 @@ Created on Fri Oct 6 2020
 """
 
 import os, dateutil, requests, time, json, concurrent
+_dir = os.path.abspath(os.path.dirname(__file__))
+_par_dir, _ = os.path.split(_dir)
 import numpy as np
 import pandas as pd
-from loguru import logger
 
 MAX_THREADS = 6
 
-logger.add('utils.log', level='INFO', format="{time} {level} {message}")
+from loguru import logger
+logger.add(os.path.join(_par_dir, 'logs', 'utils.log'), level='INFO', format="{time} {level} {message}")
 
 HEADERS_ = {
         '1': ['Finish', '1f', '2f', '3f', '4f', '5f', '6f', '7f', '8f', '9f', '10f', '11f', '12f', '13f', '14f', '15f', '16f', '17f', '18f', '19f', '20f', '21f', '22f', '23f', '24f', '25f', '26f', '27f', '28f', '29f', '30f', '31f', '32f', '33f', '34f']
