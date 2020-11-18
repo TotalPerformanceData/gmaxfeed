@@ -2,9 +2,6 @@
 
 Python3 modules for downloading and maintaining files from gmax server to local machine.
 
-## GmaxFeed.py
-Old and and barely fit for purpose, I've only left it in in case someone's used the functions from it. Will probably remove in the near future.
-
 ## PostraceFeeds.py
 
 ### GmaxFeed class
