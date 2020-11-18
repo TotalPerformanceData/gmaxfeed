@@ -10,67 +10,67 @@ Old and and barely fit for purpose, I've only left it in in case someone's used 
 ### GmaxFeed class
 
 Stores the path to each of the directories for the feeds as given from environment variables or passed at init, also checks for existence of GMAXLICENCE in environment variable, else stores in environment variables if a key is passed at init. Setting environment variables of the full path for all the directories is hands down the easiest way to use the GmaxFeed class from several different projects, as all files will be maintained just once, not duplicated in several places. Make sure you enter unique paths for each of the feeds as files are stored under the sharecode fname so you can't have points and sectionals files loose in the same directory. When environment variables are set, to use access the gmax urls all you have to do is run,
-
-from gmaxfeed.PostraceFeeds import GmaxFeed;
+```python
+from gmaxfeed.feeds.postrace_feeds import GmaxFeed;
 gmax_feed = GmaxFeed()
-
+```
 and call methods from the gmax_feed instance.
 Useful methods:
-
-.get_racelist(date:str or datetime = None, new:bool = False, sharecode:str = None)
-
-First check is the sharecode field, if given this overrides date. Pass a sharecode to get the metadata about this sharecode. 
-Second check is the date field, if not given defaults to datetime.utcnow(), if the target racelist file age is within 6 days of the date of the races then the racelist is refreshed (for changes to Published field), else the local version is used. For all method the keyword parameter new=True can be passed to force new downloads.
-
-.get_racelist_range(start_date:datetime or str = None, end_date:datetime or str = None, new:bool = False)
-
+```
+racelist = gmax_feed.get_racelist(date:str or datetime = None, new:bool = False, sharecode:str = None)
+```
+First check is the sharecode field, if given this overrides date. Pass a sharecode to get the metadata about this sharecode. return is dict {sc:info}. 
+Second check is the date field, if not given defaults to datetime.utcnow(), if the target racelist file age is within 6 days of the date of the races then the racelist is refreshed (to check for changes to Published field), else the local version is used. For all methods the keyword parameter new=True can be passed to force new downloads.
+```python
+racelist = gmax_feed.get_racelist_range(start_date:datetime or str = None, end_date:datetime or str = None, new:bool = False)
+```
 Calls all dates in the daterange start_date to end_date (inclusive), self.get_racelist(date = date, new = new) from a threadpool of max default 6 threads.
-
-.get_points(sharecode:str, new:bool)
-
-.get_sectionals(sharecode:str, new:bool = False)
-
-.get_sectionals_history(sharecode:str, new:bool = False)
-
-.get_obstacles(sharecode:str, new:bool = False)
-
-.get_route(course_codes:str or int = None, new:bool = False)
-
+```python
+points = gmax_feed.get_points(sharecode:str, new:bool)
+sectionals = gmax_feed.get_sectionals(sharecode:str, new:bool = False)
+sect_hist = gmax_feed.get_sectionals_history(sharecode:str, new:bool = False)
+obs = gmax_feed.get_obstacles(sharecode:str, new:bool = False)
+routes = gmax_feed.get_route(course_codes:str or int = None, new:bool = False)
+```
 For the above 5 methods, load the file for the sharecode from the directory, unless new is passed in which case a new file is downloaded from the gmax server. If the file doesn't exist in the directory a new one is downloaded anyway. For the benefit of threadpools and identifying what has been returned, the return format is a dict of for example, {'sc':'01202006151340', 'data':data}.
 If the feed in the .py file isn't listed above or in the docs below then it's for internal use only.
-
-.get_data(sharecodes:list, request:set = {'sectionals', 'sectionals-history', 'points', 'obstacles'}, new:bool = False, filter:RaceMetadata = None)
-
+```python
+data = gmax_feed.get_data(sharecodes:list, request:set = {'sectionals', 'sectionals-history', 'points', 'obstacles'}, new:bool = False, filter:RaceMetadata = None)
+```
 Get the data for the a passed list of sharecodes using the above functions. Returns the data for the options given, eg if only want points just pass request = {'points'}. Cached versions are default, else a new file is downloaded if a local one isn't available. This can be forced by passing new = True. A filter can be passed using the RaceMetadata class, default is None which is replaced with a Published = True filter so as not to request data from races which aren't published.
-
-.update(start_date:datetime or str = None, end_date:datetime or str = None, request:set = {'sectionals', 'points'}, new:bool = False, filter:RaceMetadata = None)
-
+```python
+gmax_feed.update(start_date:datetime or str = None, end_date:datetime or str = None, request:set = {'sectionals', 'points'}, new:bool = False, filter:RaceMetadata = None)
+```
 Update the contents of the directories for the requested feeds in request, racelist always updated and doesn't have to be specified. Pass new=True to force new files for everything. As above a filter can be passed to specify only certain sharecodes to update. By default if the file exists a new one isn't downloaded (except racelist as per the age condition above in .get_racelist()), if wanting to replace a whole list of sharecodes ensure to pass new=True.
-
-.load_all_sectionals(start_date:datetime = None, end_date:datetime = None, filter:RaceMetadata = None)
-
+```python
+sectionals = gmax_feed.load_all_sectionals(start_date:datetime = None, end_date:datetime = None, filter:RaceMetadata = None)
+```
 Load and dump the sectionals in the range into an xlsx for any manual viewing. To be improved.
 
 ### RaceMetadata class
 
 Useful class for managing/filtering a large collection of race metadata.
 Useful functions:
-
-.set_filter(countries:list or set = None, courses:list or set = None, course_codes:list or set = None, published:bool = None, start_date:datetime or str = None, end_date:datetime or str = None)
-
+```python
+filter = RaceMetadata()
+filter.set_filter(countries:list or set = None, courses:list or set = None, course_codes:list or set = None, published:bool = None, start_date:datetime or str = None, end_date:datetime or str = None)
+```
 Set the conditions for the instance filter. Calling with no parameters clears the filter.
-
-.apply_filter(countries:list or set = None, courses:list or set = None, course_codes:list or set = None, published:bool = None, start_date:datetime or str = None, end_date:datetime or str = None)
-
-You don't have to set_filter() before using apply filter, just pass the keywords to apply_filter() instead. The default behaviour is to use the details sotred using set_filter, but if this isn't set the value given to apply_filter is used, it's possible to mix the two if set_filter and apply_filter are called with different parameters which might produce unexpected results.
-
-.import_data(data:list or dict = None, direc:str = None)
-
+```python
+filter.apply_filter(countries:list or set = None, courses:list or set = None, course_codes:list or set = None, published:bool = None, start_date:datetime or str = None, end_date:datetime or str = None)
+```
+You don't have to set_filter() before using apply filter, just pass the keywords to apply_filter() instead. The default behaviour is to use the details stored using set_filter, but if this isn't set the value given to apply_filter is used, it's possible to mix the two if set_filter and apply_filter are called with different parameters which might produce unexpected results.
+```python
+filter.import_data(data:list or dict = None, direc:str = None)
+```
 Add the races in data to the instance, takes either list of dicts, or dict mapping each sharecode -> race_metadata. If data is None and a directory is passed instead (path to racelist folder) this contents of the folder are iterated and imported can be called multiple times, for instance if you run it in the morning to gather all metadata in one place and then want to add metadata for new races that have appeared in the gmax racelist later that day.
-
-.get_set(countries:bool = True, courses:bool = True, course_codes:bool = True)
-
-Get a set of all possible values within the data attribute for the given fields, and return as dictionary of sets. Useful for passing "everything except" conditions to filter, eg, for all courses except Ascot Newcastle and Bath, obj.filter(courses = obj.get_set().get('courses') - {'Ascot', 'Newcastle', 'Bath'})
+```python
+filter.get_set(countries:bool = True, courses:bool = True, course_codes:bool = True)
+```
+Get a set of all possible values within the data attribute for the given fields, and return as dictionary of sets. Useful for passing "everything except" conditions to filter, eg, for all courses except Ascot Newcastle and Bath,
+```python
+filter.set_filter(courses = obj.get_set().get('courses') - {'Ascot', 'Newcastle', 'Bath'})
+```
 
 ### TPDFeed class
 
