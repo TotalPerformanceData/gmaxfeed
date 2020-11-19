@@ -254,6 +254,7 @@ class GmaxFeed:
         sometimes may want to query the metadata for a specific race, like when populating jumps data and checking the race is NH
         for this case can leave date as None and pass a sharecode, the date is then inferred from the sharecode assuming sc[2:10] = %Y%m%d.
         """
+        data = {}
         if sharecode is not None:
             date = datetime.strptime(sharecode[2:10], '%Y%m%d')
         if date is None:
@@ -264,17 +265,18 @@ class GmaxFeed:
         if os.path.exists(path):
             mtime = datetime.fromtimestamp(os.path.getmtime(path))
             limit_date = datetime.strptime(date, '%Y-%m-%d') + timedelta(days = 6)
-            if not new and mtime > limit_date: # TODO offline mode in here
+            if (not new and mtime > limit_date) or offline:
                 data = load_file(direc = self._racelist_path, fname = date)
                 if data is not None:
                     if sharecode is not None:
                         return data.get(sharecode) or False
                     else:
                         return data
-                # if data is None file doesn't exist, try downloading a new file
-        url = 'http://www.gmaxequine.com/TPD/client/racelist.ashx?DateLocal={0}&k={1}'.format(date, self.get_licence())
-        # returns a list of dicts
-        data = process_url_response(url = url, direc = self._racelist_path, fname = date, version = 2)
+        # if data is None file doesn't exist, try downloading a new file if offline is False
+        if not offline:
+            url = 'http://www.gmaxequine.com/TPD/client/racelist.ashx?DateLocal={0}&k={1}'.format(date, self.get_licence())
+            # returns a list of dicts
+            data = process_url_response(url = url, direc = self._racelist_path, fname = date, version = 2)
         if sharecode is not None:
             return data.get(sharecode) or False
         else:
