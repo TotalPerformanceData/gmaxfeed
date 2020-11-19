@@ -248,7 +248,7 @@ class GmaxFeed:
     def get_licence(self) -> str or None:
         return os.environ.get("GMAXLICENCE")
     
-    def get_racelist(self, date:str or datetime = None, new:bool = False, sharecode:str = None, offline:bool = False) -> dict:
+    def get_racelist(self, date:str or datetime = None, new:bool = False, offline:bool = False, sharecode:str = None) -> dict:
         r"""
         datestr format is '%Y-%m-%d'
         sometimes may want to query the metadata for a specific race, like when populating jumps data and checking the race is NH
