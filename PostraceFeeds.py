@@ -28,13 +28,15 @@ Windows:
 @email: george.swindells@totalperformancedata.com
 """
 
-import os, dateutil
+import os, dateutil, importlib
 _dir = os.path.abspath(os.path.dirname(__file__))
-# TODO will tidy this up with a main.py entry point to run instead of running this as main to get daily updates 
-if __name__ == '__main__':
+# TODO will tidy this up with a main.py entry point to run instead of running this as main to get daily updates
+spec = importlib.util.find_spec('Utils')
+if __name__ == '__main__' or spec is not None:
     from Utils import listdir2, read_json, reformat_sectionals_list, reformat_gps_list, export_sectionals_to_xls, load_file, process_url_response, apply_thread_pool
 else:
     from .Utils import listdir2, read_json, reformat_sectionals_list, reformat_gps_list, export_sectionals_to_xls, load_file, process_url_response, apply_thread_pool
+    
 from datetime import datetime, timedelta, timezone
 from loguru import logger
 
@@ -248,7 +250,7 @@ class GmaxFeed:
     def get_licence(self) -> str or None:
         return os.environ.get("GMAXLICENCE")
     
-    def get_racelist(self, date:str or datetime = None, new:bool = False, sharecode:str = None) -> dict:
+    def get_racelist(self, date:str or datetime = None, new:bool = False, sharecode:str = None, offline:bool = False) -> dict:
         r"""
         datestr format is '%Y-%m-%d'
         sometimes may want to query the metadata for a specific race, like when populating jumps data and checking the race is NH
@@ -264,7 +266,7 @@ class GmaxFeed:
         if os.path.exists(path):
             mtime = datetime.fromtimestamp(os.path.getmtime(path))
             limit_date = datetime.strptime(date, '%Y-%m-%d') + timedelta(days = 6)
-            if not new and mtime > limit_date:
+            if not new and mtime > limit_date: # TODO offline mode in here
                 data = load_file(direc = self._racelist_path, fname = date)
                 if data is not None:
                     if sharecode is not None:
@@ -280,7 +282,7 @@ class GmaxFeed:
         else:
             return data
     
-    def get_racelist_range(self, start_date:datetime or str = None, end_date:datetime or str = None, new:bool = False) -> dict:
+    def get_racelist_range(self, start_date:datetime or str = None, end_date:datetime or str = None, new:bool = False, offline:bool = False) -> dict:
         if start_date is None:
             start_date = datetime(2016,1,1)
         if type(start_date) is str:
@@ -294,71 +296,81 @@ class GmaxFeed:
         end_date += timedelta(days=1) # to include last date in range
         range_ = (end_date - start_date).days
         dates = [start_date + timedelta(days=dt) for dt in range(0, range_, 1)]
-        result = apply_thread_pool(self.get_racelist, dates, new = new)
+        result = apply_thread_pool(self.get_racelist, dates, new = new, offline = offline)
         data = {}
         for row in result:
             if row:
                 data.update(row)
         return data
     
-    def get_points(self, sharecode:str, new:bool = False) -> dict:
+    def get_points(self, sharecode:str, new:bool = False, offline:bool = False) -> dict:
         # return of {'sc':sharecode, 'data':data} for benefit of multithreading to easier group runners in same races
+        data = None
         if not new:
             data = load_file(direc = self._gps_path, fname = sharecode)
             if data is not None:
                 return {'sc':sharecode, 'data':data}
-        url = 'http://www.gmaxequine.com/TPD/client/points.ashx?Sharecode={0}&k={1}'.format(sharecode, self.get_licence())
-        # returns rows of dicts delimited by newline characters, r"\r\n", readlines() issue blank final element of list
-        data = process_url_response(url = url, direc = self._gps_path, fname = sharecode, version = 3)
+        if not offline:
+            url = 'http://www.gmaxequine.com/TPD/client/points.ashx?Sharecode={0}&k={1}'.format(sharecode, self.get_licence())
+            # returns rows of dicts delimited by newline characters, r"\r\n", readlines() issue blank final element of list
+            data = process_url_response(url = url, direc = self._gps_path, fname = sharecode, version = 3)
         return {'sc':sharecode, 'data':data}
     
-    def get_sectionals(self, sharecode:str, new:bool = False) -> dict:
+    def get_sectionals(self, sharecode:str, new:bool = False, offline:bool = False) -> dict:
+        data = None
         if not new:
             data = load_file(direc = self._sectionals_path, fname = sharecode)
             if data is not None:
                 return {'sc':sharecode, 'data':data}
-        url = 'http://www.gmaxequine.com/TPD/client/sectionals.ashx?Sharecode={0}&k={1}'.format(sharecode, self.get_licence())
-        # returns a list of dicts
-        data = process_url_response(url = url, direc = self._sectionals_path, fname = sharecode, version = 1)
+        if not offline:
+            url = 'http://www.gmaxequine.com/TPD/client/sectionals.ashx?Sharecode={0}&k={1}'.format(sharecode, self.get_licence())
+            # returns a list of dicts
+            data = process_url_response(url = url, direc = self._sectionals_path, fname = sharecode, version = 1)
         return {'sc':sharecode, 'data':data}
     
-    def get_sectionals_raw(self, sharecode:str, new:bool = False) -> dict:
+    def get_sectionals_raw(self, sharecode:str, new:bool = False, offline:bool = False) -> dict:
         licence = os.environ.get('ALTLICENCE')
+        data = None
         if licence is None:
             return {'sc':sharecode, 'data':False}
         if not new:
             data = load_file(direc = self._sectionals_raw_path, fname = sharecode)
             if data is not None:
                 return {'sc':sharecode, 'data':data}
-        url = 'http://www.gmaxequine.com/TPD/client/sectionals-raw.ashx?Sharecode={0}&k={1}'.format(sharecode, licence)
-        # returns a list of dicts
-        data = process_url_response(url = url, direc = self._sectionals_raw_path, fname = sharecode, version = 1)
+        if not offline:
+            url = 'http://www.gmaxequine.com/TPD/client/sectionals-raw.ashx?Sharecode={0}&k={1}'.format(sharecode, licence)
+            # returns a list of dicts
+            data = process_url_response(url = url, direc = self._sectionals_raw_path, fname = sharecode, version = 1)
         return {'sc':sharecode, 'data':data}
     
-    def get_sectionals_history(self, sharecode:str, new:bool = False) -> dict:
+    def get_sectionals_history(self, sharecode:str, new:bool = False, offline:bool = False) -> dict:
+        data = None
         if not new:
             data = load_file(direc = self._sectionals_history_path, fname = sharecode)
             if data is not None:
                 return {'sc':sharecode, 'data':data}
-        url = 'http://www.gmaxequine.com/TPD/client/sectionals-history.ashx?Sharecode={0}&k={1}'.format(sharecode, self.get_licence())
-        # returns a list of dicts
-        data = process_url_response(url = url, direc = self._sectionals_history_path, fname = sharecode, version = 1)
+        if not offline:
+            url = 'http://www.gmaxequine.com/TPD/client/sectionals-history.ashx?Sharecode={0}&k={1}'.format(sharecode, self.get_licence())
+            # returns a list of dicts
+            data = process_url_response(url = url, direc = self._sectionals_history_path, fname = sharecode, version = 1)
         return {'sc':sharecode, 'data':data}
     
-    def get_obstacles(self, sharecode:str, new:bool = False) -> dict:
+    def get_obstacles(self, sharecode:str, new:bool = False, offline:bool = False) -> dict:
         metadata = self.get_racelist(sharecode = sharecode)
         if metadata is False or 'RaceType' not in metadata or not any([x in metadata.get('RaceType') for x in ['Hurdle', 'Chase', 'NH Flat']]):
             return {'sc':sharecode, 'data':False}
+        data = None
         if not new:
             data = load_file(direc = self._jumps_path, fname = sharecode)
             if data is not None:
                 return {'sc':sharecode, 'data':data}
-        url = 'http://www.gmaxequine.com/TPD/client/jumps.ashx?Sharecode={0}&k={1}'.format(sharecode, self.get_licence())
-        # returns a list of dicts
-        data = process_url_response(url = url, direc = self._jumps_path, fname = sharecode, version = 1)
+        if not offline:
+            url = 'http://www.gmaxequine.com/TPD/client/jumps.ashx?Sharecode={0}&k={1}'.format(sharecode, self.get_licence())
+            # returns a list of dicts
+            data = process_url_response(url = url, direc = self._jumps_path, fname = sharecode, version = 1)
         return {'sc':sharecode, 'data':data}
     
-    def get_route(self, course_codes:str or int = None, new:bool = False) -> str:
+    def get_route(self, course_codes:str or int = None, new:bool = False, offline:bool = False) -> str:
         # return dict of cc->string in kml format. Can be parsed easily using a lib like beautiful soup 4. Course file not available returns pointless msg "please check later"
         output = {}
         if course_codes is None:
@@ -373,12 +385,13 @@ class GmaxFeed:
                 if data is not None:
                     output[cc] = data
                     continue
-            url = 'http://www.gmaxequine.com/TPD/client/routes.ashx?Racecourse={0}&k={1}'.format(cc, self.get_licence())
-            # returns a klm format text file
-            output[cc] = process_url_response(url = url, direc = self._route_path, fname = fname, version = 4)
+            if not offline:
+                url = 'http://www.gmaxequine.com/TPD/client/routes.ashx?Racecourse={0}&k={1}'.format(cc, self.get_licence())
+                # returns a kml format text file
+                output[cc] = process_url_response(url = url, direc = self._route_path, fname = fname, version = 4)
         return output
     
-    def get_data(self, sharecodes:list, request:set = {'sectionals', 'sectionals-raw', 'sectionals-history', 'points', 'obstacles'}, new:bool = False, filter:RaceMetadata = None) -> dict:
+    def get_data(self, sharecodes:list, request:set = {'sectionals', 'sectionals-raw', 'sectionals-history', 'points', 'obstacles'}, new:bool = False, offline:bool = False, filter:RaceMetadata = None) -> dict:
         # multithreaded entry point for getting big selection of data, downloading new if not present, else using cached version
         if filter is None:
             filter = RaceMetadata()
@@ -387,33 +400,33 @@ class GmaxFeed:
         sharecodes = list(filter) # return keys from filter._list, post filtered
         output = {}
         if 'sectionals' in request:
-            output['sectionals'] = {row['sc']:row['data'] for row in apply_thread_pool(self.get_sectionals, sharecodes, new = new) if row['data']}
+            output['sectionals'] = {row['sc']:row['data'] for row in apply_thread_pool(self.get_sectionals, sharecodes, new = new, offline = offline) if row['data']} # TODO support offline in threadpool
         if 'sectionals-raw' in request:
-            output['sectionals-raw'] = {row['sc']:row['data'] for row in apply_thread_pool(self.get_sectionals_raw, sharecodes, new = new) if row['data']}
+            output['sectionals-raw'] = {row['sc']:row['data'] for row in apply_thread_pool(self.get_sectionals_raw, sharecodes, new = new, offline = offline) if row['data']}
         if 'sectionals-history' in request:
-            output['sectionals-history'] = {row['sc']:row['data'] for row in apply_thread_pool(self.get_sectionals_history, sharecodes, new = new) if row['data']}
+            output['sectionals-history'] = {row['sc']:row['data'] for row in apply_thread_pool(self.get_sectionals_history, sharecodes, new = new, offline = offline) if row['data']}
         if 'points' in request:
-            output['points'] = {row['sc']:row['data'] for row in apply_thread_pool(self.get_points, sharecodes, new = new) if row['data']}
+            output['points'] = {row['sc']:row['data'] for row in apply_thread_pool(self.get_points, sharecodes, new = new, offline = offline) if row['data']}
         if 'obstacles' in request:
-            output['obstacles'] = {row['sc']:row['data'] for row in apply_thread_pool(self.get_obstacles, sharecodes, new = new) if row['data']}
+            output['obstacles'] = {row['sc']:row['data'] for row in apply_thread_pool(self.get_obstacles, sharecodes, new = new, offline = offline) if row['data']}
         return output
     
-    def update(self, start_date:datetime or str = None, end_date:datetime or str = None, request:set = {'sectionals', 'points'}, new:bool = False, filter:RaceMetadata = None) -> None:
+    def update(self, start_date:datetime or str = None, end_date:datetime or str = None, request:set = {'sectionals', 'points'}, new:bool = False, offline:bool = False, filter:RaceMetadata = None) -> None:
         r"""
         update all the cached file in daterange given, only refresh if new passed. racelists are always freshed if file mtime is less than a week after the date it refers
-        if licence key is only activated for one of the above feeds then make sure to pass only the request set you want, else unauthorsied feed/s or will have folder full of 'Permission Denied' text files
+        if licence key is only activated for one of the above feeds then make sure to pass only the request set you want, else unauthorsied feed/s or will have folder full of empty text files
         """
-        sharecodes = self.get_racelist_range(start_date = start_date, end_date = end_date, new = new)
-        _ = self.get_data(sharecodes = sharecodes, request = request, new = new, filter = filter)
+        sharecodes = self.get_racelist_range(start_date = start_date, end_date = end_date, new = new, offline = offline)
+        _ = self.get_data(sharecodes = sharecodes, request = request, new = new, offline = offline, filter = filter)
     
-    def load_all_sectionals(self, start_date:datetime = None, end_date:datetime = None, filter:RaceMetadata = None) -> dict:
-        sharecodes = self.get_racelist_range(start_date=start_date, end_date=end_date)
+    def load_all_sectionals(self, start_date:datetime = None, end_date:datetime = None, offline:bool = False, filter:RaceMetadata = None) -> dict:
+        sharecodes = self.get_racelist_range(start_date = start_date, end_date = end_date, offline = offline)
         if filter is None:
             filter = RaceMetadata()
             filter.set_filter(published = True)
         _apply_filter(sharecodes = sharecodes, filter = filter) # in place
         sharecodes = list(filter) # return keys from filter._list, post filtered
-        sects = self.get_data(sharecodes = sharecodes, request = {'sectionals'}).get('sectionals')
+        sects = self.get_data(sharecodes = sharecodes, offline = offline, request = {'sectionals'}).get('sectionals')
         for sc in sects:
             sharecodes[sc]['sectionals'] = reformat_sectionals_list(sects[sc])
         data = export_sectionals_to_xls(sharecodes)

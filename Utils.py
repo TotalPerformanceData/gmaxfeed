@@ -99,14 +99,14 @@ def read_url(url:str = False, try_limit:int = 3) -> str or False:
             idx += 1
     return txt
 
-def apply_thread_pool(func, iterable, new=False) -> list:
+def apply_thread_pool(func, iterable, new:bool = False, offline:bool = False) -> list:
     threads = min([MAX_THREADS, len(iterable)])
     if threads > 1:
         with concurrent.futures.ThreadPoolExecutor(threads) as pool:
-            results = [pool.submit(func, x, new) for x in iterable]
+            results = [pool.submit(func, x, new, offline) for x in iterable]
         results = [res.result() for res in results]
     elif iterable:
-        results = [func(x, new) for x in iterable]
+        results = [func(x, new, offline) for x in iterable]
     else:
         results = []
     return results
