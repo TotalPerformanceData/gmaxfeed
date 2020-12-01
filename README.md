@@ -92,7 +92,7 @@ Feed Specifications below:
 
 Live data streams also available are:
 - Live GPS Points: https://www.gmaxequine.com/downloads/GX-RP-00007%202018-08-08%20Gmax%20Race%20Live%20Data%20Feed%20Specification.pdf
-- Live Progress: https://www.gmaxequine.com/downloads/GX-RP-00020%202019-02-15%20Gmax%20Race%20Live%20Progress%20Feed%20Specification.pdf
+- Live Progress: https://www.gmaxequine.com/downloads/GX-UG-00020%202020-08-13%20Gmax%20Race%20Live%20Progress%20Feed%20Specification.pdf
 
 Limitations:
 - Runners which don't finish are usually not included due to current limitations in the software setup,
