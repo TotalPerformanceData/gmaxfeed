@@ -191,7 +191,8 @@ class GmaxFeed:
                  route_path:str = None,
                  sectionals_history_path:str = None,
                  sectionals_raw_path:str = None,
-                 jumps_path:str = None) -> None:
+                 jumps_path:str = None,
+                 performance_path:str = None) -> None:
         self.set_licence(licence = licence)
         self.set_racelist_path(path = racelist_path)
         self.set_gps_path(path = gps_path)
@@ -200,6 +201,7 @@ class GmaxFeed:
         self.set_sectionals_history_path(path = sectionals_history_path)
         self.set_sectionals_raw_path(path = sectionals_raw_path)
         self.set_jumps_path(path = jumps_path)
+        self.set_tracker_performance_path(path = performance_path)
         if not self:
             logger.warning('No licence key set by GmaxFeed - pass licence = "my_licence" to constructor, or set GMAXLICENCE="my_licence" as environment variable')
         
@@ -240,6 +242,10 @@ class GmaxFeed:
     def set_jumps_path(self, path:str=None) -> None:
         self._jumps_path = path or os.environ.get('JUMPS_PATH') or 'jumps'
         self._confirm_exists(self._jumps_path)
+    
+    def set_tracker_performance_path(self, path:str=None) -> None:
+        self._errors_path = path or os.environ.get('PERFORMANCE_PATH') or 'tracker-errors'
+        self._confirm_exists(self._errors_path)
     
     def set_licence(self, licence:str=None) -> None:
         if "GMAXLICENCE" not in os.environ and licence is not None:
@@ -328,21 +334,6 @@ class GmaxFeed:
             data = process_url_response(url = url, direc = self._sectionals_path, fname = sharecode, version = 1)
         return {'sc':sharecode, 'data':data}
     
-    def get_sectionals_raw(self, sharecode:str, new:bool = False, offline:bool = False) -> dict:
-        licence = os.environ.get('ALTLICENCE')
-        data = None
-        if licence is None:
-            return {'sc':sharecode, 'data':False}
-        if not new:
-            data = load_file(direc = self._sectionals_raw_path, fname = sharecode)
-            if data is not None:
-                return {'sc':sharecode, 'data':data}
-        if not offline:
-            url = 'http://www.gmaxequine.com/TPD/client/sectionals-raw.ashx?Sharecode={0}&k={1}'.format(sharecode, licence)
-            # returns a list of dicts
-            data = process_url_response(url = url, direc = self._sectionals_raw_path, fname = sharecode, version = 1)
-        return {'sc':sharecode, 'data':data}
-    
     def get_sectionals_history(self, sharecode:str, new:bool = False, offline:bool = False) -> dict:
         data = None
         if not new:
@@ -355,10 +346,39 @@ class GmaxFeed:
             data = process_url_response(url = url, direc = self._sectionals_history_path, fname = sharecode, version = 1)
         return {'sc':sharecode, 'data':data}
     
+    def get_sectionals_raw(self, sharecode:str, new:bool = False, offline:bool = False) -> dict:
+        # internal use only
+        licence = os.environ.get('ALTLICENCE')
+        data = None
+        if licence is None:
+            return {'sc':sharecode, 'data':None}
+        if not new:
+            data = load_file(direc = self._sectionals_raw_path, fname = sharecode)
+            if data is not None:
+                return {'sc':sharecode, 'data':data}
+        if not offline:
+            url = 'http://www.gmaxequine.com/TPD/client/sectionals-raw.ashx?Sharecode={0}&k={1}'.format(sharecode, licence)
+            # returns a list of dicts
+            data = process_url_response(url = url, direc = self._sectionals_raw_path, fname = sharecode, version = 1)
+        return {'sc':sharecode, 'data':data}
+    
+    def get_tracker_performance(self, sharecode:str, new:bool = False, offline:bool = False) -> dict:
+        # internal use only
+        data = None
+        if not new:
+            data = load_file(direc = self._errors_path, fname = sharecode)
+            if data is not None:
+                return {'sc':sharecode, 'data':data}
+        if not offline:
+            url = 'http://www.gmaxequine.com/TPD/client/performance.ashx?Sharecode={0}&k={1}'.format(sharecode, self.get_licence())
+            # returns a list of dicts
+            data = process_url_response(url = url, direc = self._errors_path, fname = sharecode, version = 1)
+        return {'sc':sharecode, 'data':data}
+    
     def get_obstacles(self, sharecode:str, new:bool = False, offline:bool = False) -> dict:
         metadata = self.get_racelist(sharecode = sharecode)
         if metadata is False or 'RaceType' not in metadata or not any([x in metadata.get('RaceType') for x in ['Hurdle', 'Chase', 'NH Flat']]):
-            return {'sc':sharecode, 'data':False}
+            return {'sc':sharecode, 'data':None}
         data = None
         if not new:
             data = load_file(direc = self._jumps_path, fname = sharecode)
@@ -400,7 +420,7 @@ class GmaxFeed:
         sharecodes = list(filter) # return keys from filter._list, post filtered
         output = {}
         if 'sectionals' in request:
-            output['sectionals'] = {row['sc']:row['data'] for row in apply_thread_pool(self.get_sectionals, sharecodes, new = new, offline = offline) if row['data']} # TODO support offline in threadpool
+            output['sectionals'] = {row['sc']:row['data'] for row in apply_thread_pool(self.get_sectionals, sharecodes, new = new, offline = offline) if row['data']}
         if 'sectionals-raw' in request:
             output['sectionals-raw'] = {row['sc']:row['data'] for row in apply_thread_pool(self.get_sectionals_raw, sharecodes, new = new, offline = offline) if row['data']}
         if 'sectionals-history' in request:
@@ -409,6 +429,8 @@ class GmaxFeed:
             output['points'] = {row['sc']:row['data'] for row in apply_thread_pool(self.get_points, sharecodes, new = new, offline = offline) if row['data']}
         if 'obstacles' in request:
             output['obstacles'] = {row['sc']:row['data'] for row in apply_thread_pool(self.get_obstacles, sharecodes, new = new, offline = offline) if row['data']}
+        if 'performance' in request:
+            output['performance'] = {row['sc']:row['data'] for row in apply_thread_pool(self.get_tracker_performance, sharecodes, new = new, offline = offline) if row['data']}
         return output
     
     def update(self, start_date:datetime or str = None, end_date:datetime or str = None, request:set = {'sectionals', 'points'}, new:bool = False, offline:bool = False, filter:RaceMetadata = None) -> None:
