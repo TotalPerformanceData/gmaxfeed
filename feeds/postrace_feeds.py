@@ -107,6 +107,7 @@ class RaceMetadata:
             elif type(data) is dict:
                 for row in data.values():
                     self._data[row['I']] = row
+        self._list = self._data
     
     def get_set(self, countries:bool = True, courses:bool = True, course_codes:bool = True, race_types:bool = True) -> dict:
         r"""
@@ -172,11 +173,15 @@ class RaceMetadata:
                 self._list[sc] = row
 
     
-def _apply_filter(sharecodes:dict, filter:RaceMetadata) -> RaceMetadata:
-    # when filtering data using the RaceMetadata class, set the filters using filter.set_filter() and then pass the sharecodes and RaceMetadata object to this
-    filter.import_data(data = sharecodes) # sharecodes must be a dicts of all the metadata if passing this filter
+def _apply_filter(sharecodes:dict, filter:RaceMetadata) -> None:
+    r"""
+    when filtering data using the RaceMetadata class, set the filters using filter.set_filter(),
+    and then pass the sharecodes and RaceMetadata object to this.
+    sharecodes must be a dicts of all the metadata if passing to this func
+    """
+    filter.import_data(data = sharecodes)
     filter.apply_filter()
-    #return filter # filter..__iter__ iterates the sharecodes that pass that filter conditions, so can convert to list using list(filter)
+
 
 class GmaxFeed:
     r"""
@@ -411,13 +416,19 @@ class GmaxFeed:
                 output[cc] = process_url_response(url = url, direc = self._route_path, fname = fname, version = 4)
         return output
     
-    def get_data(self, sharecodes:list, request:set = {'sectionals', 'sectionals-raw', 'sectionals-history', 'points', 'obstacles'}, new:bool = False, offline:bool = False, filter:RaceMetadata = None) -> dict:
-        # multithreaded entry point for getting big selection of data, downloading new if not present, else using cached version
-        if filter is None:
-            filter = RaceMetadata()
-            filter.set_filter(published = True)
-        _apply_filter(sharecodes = sharecodes, filter = filter) # in place
-        sharecodes = list(filter) # return keys from filter._list, post filtered
+    def get_data(self, sharecodes:dict or list, request:set = {'sectionals', 'sectionals-raw', 'sectionals-history', 'points', 'obstacles'}, new:bool = False, offline:bool = False, filter:RaceMetadata = None) -> dict:
+        r"""
+        pass dict of racelist data sc -> metadata. if list is passed instead assumed to be raceids and won't be filtered. 
+        multithreaded entry point for getting big selection of data, downloading new if not present, else using cached version
+        """
+        if type(sharecodes) is dict:
+            if filter is None:
+                filter = RaceMetadata()
+                filter.set_filter(published = True) # think i forced this for the purpose of not requesting sectional and points for unpublished races, but sec-raw, obstacles and perf would still be valid
+            _apply_filter(sharecodes = sharecodes, filter = filter) # in place
+            sharecodes = list(filter) # return keys from filter._list, post filtered
+        elif not sharecodes:
+            return {}
         output = {}
         if 'sectionals' in request:
             output['sectionals'] = {row['sc']:row['data'] for row in apply_thread_pool(self.get_sectionals, sharecodes, new = new, offline = offline) if row['data']}
