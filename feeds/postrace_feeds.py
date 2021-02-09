@@ -30,7 +30,7 @@ Windows:
 @email: george.swindells@totalperformancedata.com
 """
 
-import os, dateutil, importlib
+import os, dateutil
 _dir = os.path.abspath(os.path.dirname(__file__))
 _par_dir, _ = os.path.split(_dir)
 

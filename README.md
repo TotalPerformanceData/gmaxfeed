@@ -114,3 +114,45 @@ The Rust program is quite simple, since there's no GIL to worry about causing dr
 Compiling the Rust executable is fortunately made very easy as they've put a lot of thought into the package manager system "Cargo" and explain everything you could need on the Rust website.
 My program requires an environment variable called REDIS_PASSWD for authentication to redis on localhost. It takes an optional (can be hardcoded) integer as the port number on which to listen for incoming packets.
 
+
+## emulate_live.py
+
+For testing the packet recorders you can use the emulate_live.py functions. I haven't put a great deal of concern into the reliability of the time intervals. eg, i'm not worried if a packet is sent at ±0.2s from when it should be, the purpose is merely to test code that records the data stream and other things thereof such as graphics. It's probably not suitable for backtesting betting strategies which do require high accuracy.
+
+Data needs to be prepared into a format {timestamp1: [packet1, packet2, ...], timestamp2:[]...}
+The asyncio scheduler then schedules each key to be executed in the future based on the difference between then timestamp and the minimum timestamp (± 2 seconds). I chose this method instead of a simple timer such as:
+
+```python
+for ts in data:
+ for row in data[ts]:
+  server.sendto(row, (addr, port))
+ time.sleep(time_interval)
+```
+
+because this would be vulnerable to clockdrift. I used asyncio because I was scheduling hundreds of tasks which would probably not work with OS threads. Also note that the difference between timestamps keys isn't guaranteed to be uniform in cases where the radio signal or internet failed for example.
+Alternatively you could have two threads such as:
+
+```python
+queue = Queue()
+#Thread1
+timestamps = [parse(ts) for ts in data]
+start_time = min(timestamps)
+intervals = [x - start_time for x in timestamps]
+for sleep_time, ts_key in zip(intervals, data):
+ time.sleep(sleep_time)
+ queue.put(ts)
+
+#Thread2
+while True:
+ try:
+  ts = queue.get(timeout = 5)
+ except Empty:
+  print("queue empty, exiting")
+  break
+ for row in data[ts]:
+  server.sendto(row, (addr, port))
+
+```
+
+which would probably be the most accurate for timekeeping, but I didn't think of it until now, plus wanted to get a bit of practice in with asyncio.
+
