@@ -75,8 +75,24 @@ class RaceMetadata:
     def __repr__(self) -> str:
         return "< RaceMetadata - Races:{0} >".format(len(self._data))
     
-    def set_filter(self, countries:list or set = None, courses:list or set = None, course_codes:list or set = None, published:bool = None, start_date:datetime or str = None, end_date:datetime or str = None, race_types:list or set = None) -> None:
+    def set_filter(self,
+                   countries:list or set = None,
+                   courses:list or set = None,
+                   course_codes:list or set = None,
+                   published:bool = None,
+                   start_date:datetime or str = None,
+                   end_date:datetime or str = None,
+                   race_types:list or set = None,
+                   opts:dict = {}) -> None:
+        r""" set the internal filter using the named values or a dict of named values """
         self._filter = {'countries':countries, 'courses':courses, 'course_codes':course_codes, 'published':published, 'start_date':start_date, 'end_date':end_date, 'race_types':race_types}
+        for key in opts:
+            if key in self._filter:
+                if key != 'published' and type(opts[key]) not in [list, set, dict]:
+                    opts[key] = [opts[key]]
+                self._filter[key] = opts[key]
+            else:
+                raise Exception("key {0} given to RaceMetadata instance.set_filter(), not recognised as valid option".format(key))
     
     def get(self, sharecode:str) -> dict or None:
         return self._data.get(sharecode)
