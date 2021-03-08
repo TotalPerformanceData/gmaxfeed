@@ -13,7 +13,7 @@ _par_dir, _ = os.path.split(_dir)
 import numpy as np
 import pandas as pd
 
-MAX_THREADS = 6
+MAX_THREADS = 4
 
 from loguru import logger
 logger.add(os.path.join(_par_dir, 'logs', 'utils.log'), level='INFO', format="{time} {level} {message}")
