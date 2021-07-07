@@ -36,6 +36,7 @@ _par_dir, _ = os.path.split(_dir)
 
 from .Utils import listdir2, read_json, reformat_sectionals_list, reformat_gps_list, export_sectionals_to_xls, load_file, process_url_response, apply_thread_pool
 from datetime import datetime, timedelta, timezone
+from datetime import date as date_
 
 r"""
 os.environ['RACELIST_PATH'] = '/path/to/racelist'
@@ -286,7 +287,7 @@ class GmaxFeed:
             date = datetime.strptime(sharecode[2:10], '%Y%m%d')
         if date is None:
             date = datetime.today()
-        if type(date) is datetime:
+        if type(date) is datetime or type(date) is date_:
             date = date.strftime('%Y-%m-%d')
         path = os.path.join(self._racelist_path, date)
         if os.path.exists(path):
