@@ -91,7 +91,7 @@ def read_url(url:str = False, try_limit:int = 3) -> str or False:
     while idx != try_limit:
         try:
             with requests.Session() as s:
-                response = s.get(url, timeout = 5)
+                response = s.get(url, timeout = 8)
                 txt = response.text
                 if txt == "Permission Denied":
                     txt = False

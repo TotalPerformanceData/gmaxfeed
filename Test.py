@@ -22,7 +22,7 @@ def test_get_range(start_date = datetime(2020,10,1, tzinfo = timezone.utc), end_
    sharecodes = gmax_feed.get_racelist_range(start_date = start_date, end_date = end_date, new = new)
    return sharecodes
 
-def test_get_data(date:datetime = datetime(2020,10,2, tzinfo = timezone.utc), request:set = {'sectionals', 'sectionals-history', 'points', 'obstacles'}, new:bool = False, filter:RaceMetadata = None):
+def test_get_data(date:datetime = datetime(2020,10,5, tzinfo = timezone.utc), request:set = {'sectionals', 'sectionals-history', 'points', 'obstacles'}, new:bool = False, filter:RaceMetadata = None):
     sharecodes = gmax_feed.get_racelist(date = date, new = new)
     data = gmax_feed.get_data(sharecodes = sharecodes, request = request, new = new, filter = filter)
     return data
@@ -33,6 +33,9 @@ def test_filter(filter:RaceMetadata = None) -> filter:
         filter.set_filter(countries = {'GB', 'CA'}, start_date = datetime(2020,10,1, tzinfo = timezone.utc), end_date = datetime(2020,10,7, tzinfo = timezone.utc), published = True)
     gmax_feed.update(start_date = '2020-09-25', end_date = '2020-10-02', request = {'sectionals'}, filter = filter)
     return filter
+
+def test_get_race(sharecode: str = "58202010051755") -> dict:
+    return gmax_feed.get_race(sharecode = sharecode, new = True)
 
 if __name__ == '__main__':
     try:
@@ -53,4 +56,7 @@ if __name__ == '__main__':
         daily_data = test_get_data()
     except Exception:
         logger.exception('Error in racelist range generation')
+    
+    single_record = test_get_race()
+    
     
