@@ -55,11 +55,7 @@ def reformat_gps_list(data:list, by:str='T') -> dict:
 
 def load_file(direc:str, fname:str) -> dict or None:
     path = os.path.join(direc, fname)
-    if os.path.exists(path):
-        data = read_json(path)
-    else:
-        data = None
-    return data
+    return read_json(path)
 
 def dump_file(data:dict, direc:str, fname:str) -> None:
     path = os.path.join(direc, fname)

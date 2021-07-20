@@ -48,12 +48,14 @@ from .Utils import (listdir2,
 from datetime import datetime, timedelta, timezone
 from datetime import date as date_
 
-r"""
+"""
+os.environ['FIXTURES_PATH'] = '/path/to/fixtures'
 os.environ['RACELIST_PATH'] = '/path/to/racelist'
 os.environ['SEC_PATH'] = '/path/to/sectionals'
 os.environ['GPS_PATH'] = '/path/to/gpsData'
 os.environ['SEC_HIST_PATH'] = '/path/to/sectionals-hist'
-os.environ['SEC_RAW_PATH'] = '/path/to/sectionals-raw'
+os.environ['SEC_RAW_PATH'] = '/path/to/sectionals-raw' #internal
+os.environ['PERFORMANCE_PATH'] = '/path/to/tracker-performance' #internal
 os.environ['ROUTE_PATH'] = '/path/to/routes'
 os.environ['JUMPS_PATH'] = '/path/to/jumps'
 os.environ['GMAXLICENCE'] = 'my_licence'
@@ -64,7 +66,7 @@ logger.add(os.path.join(_par_dir, 'logs', 'postrace_feeds.log'), level='INFO', f
 
 
 class RaceMetadata:
-    r"""
+    """
     house metadata about the races, and filter for given countries, courses, published status etc if applicable
     can define without data, and call set_filter() to apply to something later, such as in gmax_feed.get_data()
     """
@@ -74,9 +76,10 @@ class RaceMetadata:
         self._filter = {}
     
     def __iter__(self) -> str:
-        r"""
+        """
         iterate the values which passed the filter parameters, returning tuple of (key, value).
-        Be careful not to make changes to the items in the dict as the keys in self._list and self._data actually point to the same place 
+        Be careful not to make changes to the items in the dict as the keys in 
+        self._list and self._data actually point to the same place 
         """
         yield from self._list.keys()
     
@@ -168,10 +171,15 @@ class RaceMetadata:
                     self._data[row['I']] = row
         self._list = self._data
     
-    def get_set(self, countries:bool = True, courses:bool = True, course_codes:bool = True, race_types:bool = True) -> dict:
-        r"""
-        get a set of all possible values within self._data for the given fields, and return as dictionary of sets.
-        Useful for passing "everything except" conditions to filter, eg, for all courses except Ascot Newcastle and Bath,
+    def get_set(self,
+                countries:bool = True,
+                courses:bool = True,
+                course_codes:bool = True,
+                race_types:bool = True) -> dict:
+        """
+        get a set of all possible values within self._data for the given fields
+        and return as dictionary of sets. Useful for passing "everything except" 
+        conditions to filter, eg, for all courses except Ascot Newcastle and Bath,
         obj.filter(courses = obj.get_set().get('courses') - {'Ascot', 'Newcastle', 'Bath'})
         """
         output = {}
@@ -185,9 +193,17 @@ class RaceMetadata:
             output['race_types'] = set([sc.get('RaceType') for sc in self._data.values()]) # assumes first two chars are the course code, might change in later years
         return output
     
-    def apply_filter(self, countries:list or set = None, courses:list or set = None, course_codes:list or set = None, published:bool = None, start_date:datetime or str = None, end_date:datetime or str = None, race_types:list or set = None) -> None:
-        r"""
-        filter the sharecodes within self._data by the given conditions. passing sets will be much faster if giving long lists of options.
+    def apply_filter(self,
+                     countries:list or set = None,
+                     courses:list or set = None,
+                     course_codes:list or set = None,
+                     published:bool = None,
+                     start_date:datetime or str = None,
+                     end_date:datetime or str = None,
+                     race_types:list or set = None) -> None:
+        """
+        filter the sharecodes within self._data by the given conditions
+        passing sets will be much faster if giving long lists of options.
         courses = ['Ascot', 'Newcastle', 'Lingfield Park'] # if courses is not None, only include entry if the course of the record is in the given list or set
         course_codes = ['01', '35', '30']
         countries = ['US', 'GB'] 
@@ -233,7 +249,7 @@ class RaceMetadata:
 
     
 def _apply_filter(sharecodes:dict, filter:RaceMetadata) -> None:
-    r"""
+    """
     when filtering data using the RaceMetadata class, set the filters using filter.set_filter(),
     and then pass the sharecodes and RaceMetadata object to this.
     sharecodes must be a dicts of all the metadata if passing to this func
@@ -243,12 +259,13 @@ def _apply_filter(sharecodes:dict, filter:RaceMetadata) -> None:
 
 
 class GmaxFeed:
-    r"""
+    """
     instantiate with licence key so don't have to keep placing into function calls.
     if licence key not passed on instantiation checks for a licence key in env called 'GMAXLICENCE'
     """
     def __init__(self, 
-                 licence:str = None, 
+                 licence:str = None,
+                 fixtures_path:str = None,
                  racelist_path:str = None, 
                  sectionals_path:str = None, 
                  gps_path:str = None, 
@@ -258,6 +275,7 @@ class GmaxFeed:
                  jumps_path:str = None,
                  performance_path:str = None) -> None:
         self.set_licence(licence = licence)
+        self.set_fixtures_path(path = fixtures_path)
         self.set_racelist_path(path = racelist_path)
         self.set_gps_path(path = gps_path)
         self.set_route_path(path = route_path)
@@ -278,6 +296,10 @@ class GmaxFeed:
     def _confirm_exists(self, path:str) -> bool:
         if not os.path.exists(path):
             os.mkdir(path)
+    
+    def set_fixtures_path(self, path:str = None) -> None:
+        self._fixtures_path = path or os.environ.get('FIXTURES_PATH') or 'fixtures'
+        self._confirm_exists(self._fixtures_path)
     
     def set_racelist_path(self, path:str=None) -> None:
         self._racelist_path = path or os.environ.get('RACELIST_PATH') or 'racelist'
@@ -317,6 +339,50 @@ class GmaxFeed:
         
     def get_licence(self) -> str or None:
         return os.environ.get("GMAXLICENCE")
+    
+    def get_fixtures(self, date: str = None, new: bool = False, offline: bool = False) -> list or False:
+        """
+        fetch fixtures for the given date (or datetime.today() if date = None)
+        from the gmax /fixtures feed, return next 7 days of fixtures from date given
+
+        Parameters
+        ----------
+        self date : str
+            date for which to fetch upcoming fixtures.
+        new : bool, optional
+            whether to ignore the cached file and fetch new. The default is False.
+        offline : bool, optional
+            whether to only use cached files. The default is False.
+
+        Returns
+        -------
+        list or False
+            list of fixtures or False.
+        """
+        data = []
+        if date is None:
+            date = datetime.utcnow()
+        elif type(date) is str:
+            date = dateutil.parser.parse(date)
+        elif type(date) is date_:
+            date = datetime.combine(date, datetime.min.time())
+        date_str = date.strftime('%Y-%m-%d')
+        path = os.path.join(self._fixtures_path, date_str)
+        if os.path.exists(path) and not new:
+            mtime = datetime.fromtimestamp(os.path.getmtime(path))
+            limit_date = date + timedelta(days = 6)
+            if (not new and mtime > limit_date) or offline:
+                data = load_file(direc = self._fixtures_path, fname = date_str)
+                if data is not None:
+                    return data
+        # if data is None file doesn't exist, try downloading a new file if offline is False
+        if not offline:
+            url = 'https://www.gmaxequine.com/TPD/client/fixtures.ashx?DateLocal={0}&k={1}'.format(date_str, self.get_licence())
+            # returns a list of 1 dict or empty list - process manually here as don't want to cache just one race
+            txt = read_url(url)
+            if txt:
+                data = json.loads(txt)
+        return data
     
     def get_race(self, sharecode: str, date: str or datetime = None, new:bool = False, offline:bool = False) -> dict or False:
         """
@@ -523,7 +589,7 @@ class GmaxFeed:
         return output
     
     def get_data(self, sharecodes:dict or list, request:set = {'sectionals', 'sectionals-raw', 'sectionals-history', 'points', 'obstacles'}, new:bool = False, offline:bool = False, filter:RaceMetadata = None) -> dict:
-        r"""
+        """
         pass dict of racelist data sc -> metadata. if list is passed instead assumed to be raceids and won't be filtered. 
         multithreaded entry point for getting big selection of data, downloading new if not present, else using cached version
         """
@@ -551,7 +617,7 @@ class GmaxFeed:
         return output
     
     def update(self, start_date:datetime or str = None, end_date:datetime or str = None, request:set = {'sectionals', 'points'}, new:bool = False, offline:bool = False, filter:RaceMetadata = None) -> None:
-        r"""
+        """
         update all the cached file in daterange given, only refresh if new passed. racelists are always freshed if file mtime is less than a week after the date it refers
         if licence key is only activated for one of the above feeds then make sure to pass only the request set you want, else unauthorsied feed/s or will have folder full of empty text files
         """
@@ -573,7 +639,7 @@ class GmaxFeed:
 
 # TODO to be completed
 class TPDFeed(GmaxFeed):
-    r"""
+    """
     adds derivative feeds from https://www.tpd-viewer.com, par lines, expected finish times etc
     """
     def __init__(self,
@@ -614,7 +680,7 @@ class TPDFeed(GmaxFeed):
         return (os.environ.get("TPD_USER"), os.environ.get("TPD_PASSWD"))
     
     def set_race_pars_path(self, path:str=None) -> None:
-        r"""
+        """
         pars for each sharecode condiering ground, class, age. delivered as arrays of,
         p - Progress, distance from finish line
         xy - longitude and latitiude coords

@@ -37,6 +37,11 @@ def test_filter(filter:RaceMetadata = None) -> filter:
 def test_get_race(sharecode: str = "58202010051755") -> dict:
     return gmax_feed.get_race(sharecode = sharecode, new = True)
 
+def test_get_fixtures(date: str = '2019-05-01'):
+    data = gmax_feed.get_fixtures(date = date)
+    print(len(data))
+    return data
+
 if __name__ == '__main__':
     try:
         # should return dict of racelist feed, sharecode->metadata
@@ -59,4 +64,6 @@ if __name__ == '__main__':
     
     single_record = test_get_race()
     
+    fixtures = test_get_fixtures()
+    fixtures_upcoming = gmax_feed.get_fixtures()
     
