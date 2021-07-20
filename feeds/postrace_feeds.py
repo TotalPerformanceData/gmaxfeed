@@ -378,10 +378,7 @@ class GmaxFeed:
         # if data is None file doesn't exist, try downloading a new file if offline is False
         if not offline:
             url = 'https://www.gmaxequine.com/TPD/client/fixtures.ashx?DateLocal={0}&k={1}'.format(date_str, self.get_licence())
-            # returns a list of 1 dict or empty list - process manually here as don't want to cache just one race
-            txt = read_url(url)
-            if txt:
-                data = json.loads(txt)
+            data = process_url_response(url = url, direc = self._fixtures_path, fname = date_str, version = 1) or False
         return data
     
     def get_race(self, sharecode: str, date: str or datetime = None, new:bool = False, offline:bool = False) -> dict or False:
