@@ -11,7 +11,7 @@ side or in the Gmax servers.
 
 If you can't be bothered writing loads of low level C or Rust code to direct the 
 packet to the correct place, it's a good solution to just use the executable
-to add packets to a redis event queue (or RabbitMQ) and then python3 can pop
+to add packets to a redis queue (or RabbitMQ) and then python3 can pop
 those off at leisure without worry of missing packets.
 
 Using a MQ like redis is also benficial in systems where many programs may want
@@ -20,25 +20,19 @@ to use the datafeed simultaneously, since many queues can be used
 @author: tpd
 """
 
-import os, sys, json
-_root_dir = os.path.abspath(os.path.dirname(__file__))
-_par_root_dir, _ = os.path.split(_root_dir)
-_main_dir = os.environ.get("MAIN_DIR")
-
-if _main_dir not in sys.path:
-    sys.path.append(_main_dir)
-if _par_root_dir not in sys.path:
-    sys.path.append(_par_root_dir)
-
+import os
+import json
 from datetime import datetime
 from redis.client import Redis
-from loguru import logger
 
+from . import get_logger
+
+logger = get_logger(name = __name__)
+logger.info("booting recorder at {0}".format(datetime.utcnow()))
 
 REDIS_CLIENT = Redis(password = os.environ.get("REDIS_PASSWD"))
 
-logger.add(os.path.join(_main_dir, 'logs/redis_recorder.log'), format="{time} {level} {message}", level='INFO')
-logger.info("booting recorder at {0}".format(datetime.utcnow()))
+_main_dir = os.environ.get("MAIN_DIR") or '..'
 
 
 def add_directory(raceid:str, path:str) -> None:

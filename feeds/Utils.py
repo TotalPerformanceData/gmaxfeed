@@ -8,15 +8,14 @@ Created on Fri Oct 6 2020
 """
 
 import os, dateutil, requests, time, json, concurrent
-_dir = os.path.abspath(os.path.dirname(__file__))
-_par_dir, _ = os.path.split(_dir)
 import numpy as np
 import pandas as pd
 
 MAX_THREADS = 4
 
-from loguru import logger
-logger.add(os.path.join(_par_dir, 'logs', 'utils.log'), level='INFO', format="{time} {level} {message}")
+from . import get_logger
+
+logger = get_logger(name = __name__)
 
 HEADERS_ = {
         '1': ['Finish', '1f', '2f', '3f', '4f', '5f', '6f', '7f', '8f', '9f', '10f', '11f', '12f', '13f', '14f', '15f', '16f', '17f', '18f', '19f', '20f', '21f', '22f', '23f', '24f', '25f', '26f', '27f', '28f', '29f', '30f', '31f', '32f', '33f', '34f']
@@ -109,6 +108,47 @@ def apply_thread_pool(func, iterable, new:bool = False, offline:bool = False) ->
     else:
         results = []
     return results
+
+def validate_sectionals(data: list, handle_dups: bool = True) -> list:
+    """
+    check the sectionals for duplicates and missing sections.
+    if a duplicate is found, usually if a horse's gate is split in two, and
+    handle_dups if True then the if the two records are obviously from a split
+    section they're added together.
+
+    Parameters
+    ----------
+    data : list
+        list of sectional data for some race
+    handle_dups : bool, optional
+        whether to add duplicated sections together. The default is True.
+
+    Returns
+    -------
+    list
+        list of validated sectional data for some race.
+    """
+    if data:
+        unique_tuples = set([(row["I"], row["G"]) for row in data])
+        if len(unique_tuples) != len(data):
+            logger.warning("Duplicate runner section warning, checking to see which runner and gate...")
+            runners = set([row['I'] for row in data])
+            new_data = {}
+            for runner in runners:
+                for row in data:
+                    if row["I"] == runner:
+                        key = (row["I"], row["G"])
+                        if key in new_data:
+                            logger.warning("duplicate gate found: runner: {0} gate: {1}. Attempting to fix by addition...".format(row["I"], row["G"]))
+                            if False: #new_data[key]["S"] < 2. or row["S"] < 2.:
+                                logger.warning("fixing by addition: {0} + {1}".format(new_data[key], row))
+                                for k, v in row.items():
+                                    if k in {'S', 'R', 'D', 'N'}:
+                                        new_data[key][k] += v
+                        else:
+                            new_data[key] = row
+            data = [row for row in new_data.values()]
+    return data
 
 def _compute_derivatives(data:dict, race_length:float) -> dict:
     average_sl = np.sum([gate['D'] for gate in data.values()]) / np.sum([gate['N'] for gate in data.values() if 'N' in gate and gate['D'] > 0])

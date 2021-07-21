@@ -57,8 +57,9 @@ if not os.path.exists(DIREC):
     os.mkdir(DIREC)
 
 _par_dir, _ = os.path.split(_dir)
-from loguru import logger
-logger.add(os.path.join(_par_dir, 'logs', 'live_recording.log'), level='INFO', format="{time} {level} {message}")
+
+from . import get_logger
+logger = get_logger(name = __name__)
 
 
 # to terminate user can input 't' for a more graceful exit

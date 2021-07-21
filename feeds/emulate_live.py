@@ -12,14 +12,13 @@ programs from the IDE console so safest option is to run from a plain python con
 @author: tpd
 """
 
-import os, socket, json, asyncio, dateutil, threading
+import socket, json, asyncio, dateutil, threading
 from queue import Queue, Empty
 from datetime import datetime, timedelta
-_dir = os.path.abspath(os.path.dirname(__file__))
-_par_dir, _ = os.path.split(_dir)
 
-from loguru import logger
-logger.add(os.path.join(_par_dir, 'logs', 'emulate_live.log'), level='INFO', format="{time} {level} {message}")
+from . import get_logger
+
+logger = get_logger(name = __name__)
 
 
 async def wait_until(dt:datetime, dt_now:datetime = None) -> None:

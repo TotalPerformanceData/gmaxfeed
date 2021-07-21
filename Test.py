@@ -41,7 +41,7 @@ def test_get_fixtures(date: str = '2019-05-01'):
     data = gmax_feed.get_fixtures(date = date)
     print(len(data))
     return data
-
+    
 if __name__ == '__main__':
     try:
         # should return dict of racelist feed, sharecode->metadata

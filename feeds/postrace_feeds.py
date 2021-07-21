@@ -61,8 +61,8 @@ os.environ['JUMPS_PATH'] = '/path/to/jumps'
 os.environ['GMAXLICENCE'] = 'my_licence'
 """
 
-from loguru import logger
-logger.add(os.path.join(_par_dir, 'logs', 'postrace_feeds.log'), level='INFO', format="{time} {level} {message}")
+from . import get_logger
+logger = get_logger(name = __name__)
 
 
 class RaceMetadata:
