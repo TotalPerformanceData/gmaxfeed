@@ -38,6 +38,7 @@ _dir = os.path.abspath(os.path.dirname(__file__))
 _par_dir, _ = os.path.split(_dir)
 
 from .Utils import (listdir2,
+                    to_datetime,
                     read_json,
                     reformat_sectionals_list,
                     export_sectionals_to_xls,
@@ -216,8 +217,8 @@ class RaceMetadata:
         course_codes = course_codes or self._filter.get('course_codes')
         race_types = race_types or self._filter.get('race_types')
         published = published or self._filter.get('published')
-        start_date = start_date or self._filter.get('start_date')
-        end_date = end_date or self._filter.get('end_date')
+        start_date = to_datetime(start_date or self._filter.get('start_date'), tz = dateutil.tz.UTC)
+        end_date = to_datetime(end_date or self._filter.get('end_date'), tz = dateutil.tz.UTC)
         if all([x is None for x in [countries, courses, course_codes, published, start_date, end_date, race_types]]):
             self._list = self._data
         else:
@@ -362,10 +363,8 @@ class GmaxFeed:
         data = []
         if date is None:
             date = datetime.utcnow()
-        elif type(date) is str:
-            date = dateutil.parser.parse(date)
-        elif type(date) is date_:
-            date = datetime.combine(date, datetime.min.time())
+        else:
+            date = to_datetime(date)
         date_str = date.strftime('%Y-%m-%d')
         path = os.path.join(self._fixtures_path, date_str)
         if os.path.exists(path) and not new:
@@ -406,10 +405,8 @@ class GmaxFeed:
         data = {}
         if date is None:
             date = datetime.strptime(sharecode[2:10], '%Y%m%d')
-        elif type(date) is str:
-            date = dateutil.parser.parse(date)
-        elif type(date) is date_:
-            date = datetime.combine(date, datetime.min.time())
+        else:
+            date = to_datetime(date)
         date_str = date.strftime('%Y-%m-%d')
         path = os.path.join(self._racelist_path, date_str)
         if os.path.exists(path) and not new:
@@ -465,12 +462,12 @@ class GmaxFeed:
     def get_racelist_range(self, start_date:datetime or str = None, end_date:datetime or str = None, new:bool = False, offline:bool = False) -> dict:
         if start_date is None:
             start_date = datetime(2016,1,1)
-        if type(start_date) is str:
-            start_date = dateutil.parser.parse(start_date)
+        else:
+            start_date = to_datetime(start_date)
         if end_date is None:
             end_date = datetime.utcnow()
-        if type(end_date) is str:
-            end_date = dateutil.parser.parse(end_date)
+        else:
+            end_date = to_datetime(end_date)
         if end_date < start_date:
             end_date = start_date
         end_date += timedelta(days=1) # to include last date in range

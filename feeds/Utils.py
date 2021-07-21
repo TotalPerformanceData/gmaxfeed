@@ -16,6 +16,7 @@ import concurrent
 import concurrent.futures
 import numpy as np
 import pandas as pd
+from datetime import datetime, date
 
 MAX_THREADS = 4
 
@@ -32,6 +33,32 @@ def listdir2(fol:str) -> list:
 
 def _gate_num(x:str) -> float:
     return float(x.replace('f','').replace('Finish','0').replace('F',''))
+
+def to_datetime(d: datetime or int or float or str = None, tz = None):
+    """
+    check the format of the given datetime and return as naive UTC datetime 
+    Inputs:
+        d: datetime or int or str - the datetime object or timestamp (seconds, or millis) of the recorded offtime
+        ts: tzinfo for the output datetime object (None default for naive)
+    Outputs:
+        datetime, UTC, tz-naive
+    """
+    if type(d) is str:
+        d = dateutil.parser.parse(d)
+    elif type(d) is date:
+        d = datetime.combine(date, datetime.min.time())
+    elif type(d) in [float, int]:
+        if d > 2051222400: # probably given in milliseconds
+            d = d / 1000
+        else: # probably given in seconds
+            pass
+        d = datetime.utcfromtimestamp(d)
+    if type(d) is datetime:
+        if tz is not None:
+            d = d.astimezone(tz)
+        else:
+            d = d.astimezone(dateutil.tz.UTC).replace(tzinfo = None)
+        return d
 
 def read_json(path:str) -> list:
     data = None
