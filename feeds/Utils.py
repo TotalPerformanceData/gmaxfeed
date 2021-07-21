@@ -7,7 +7,13 @@ Created on Fri Oct 6 2020
 @email: george.swindells@totalperformancedata.com
 """
 
-import os, dateutil, requests, time, json, concurrent
+import os
+import json
+import time
+import requests
+import dateutil
+import concurrent
+import concurrent.futures
 import numpy as np
 import pandas as pd
 
