@@ -198,6 +198,22 @@ def _compute_derivatives(data:dict, race_length:float) -> dict:
               'sections':sections
            }
 
+def export_sectionals_to_csv(sectionals: dict or list, fname: str = None, compression: str = None) -> None:
+    """
+    export the given dictionary/list of sharecodes to csv format
+
+    Parameters
+    ----------
+    sectionals : dict
+        dictionary or list of all sectionals to export as given by gmax API.
+    compression: str
+        as per options for df.to_csv(compression = compression)
+    """
+    if type(sectionals) is dict:
+        sectionals = [row for row in sectionals.values()]
+    df = pd.DataFrame.from_records(sectionals)
+    df.to_csv(fname or 'tpd_sectionals.csv', compression = compression)
+
 def export_sectionals_to_xls(sharecodes:dict) -> None:
     # make pandas dataframe and then write it to xls file
     data = {}
@@ -250,6 +266,25 @@ def export_sectionals_to_xls(sharecodes:dict) -> None:
     df = pd.DataFrame.from_dict(data, 'index')
     df.to_excel('tpd_sectionals.xlsx')
     return data
+
+def last_tracker_use(data: list, fname: str = None) -> dict:
+    # get date of latest usage of each tracker from performance feed
+    trackers = {}
+    for row in data:
+        date = row["I"][2:14]
+        t1 = row.get("ID1")
+        t2 = row.get("ID2")
+        for t in [t1, t2]:
+            if t and "Unknown" not in t:
+                if t not in trackers:
+                    trackers[t] = {"date": date, "code": t[-3:], "sharecode": row["I"]}
+                else:
+                    if date > trackers[t]["date"]:
+                       trackers[t] = {"date": date, "code": t[-3:], "sharecode": row["I"]}
+    for t in trackers:
+        trackers[t]["date"] = datetime.strptime(trackers[t]["date"], "%Y%m%d%H%M")
+    return pd.DataFrame.from_dict(trackers, orient = 'index')
+    #df.to_excel(fname or 'latest_tracker_uses.xlsx')
 
 def haversine(x1:np.ndarray, x2:np.ndarray, y1:np.ndarray, y2:np.ndarray) -> np.ndarray:
     # input in degrees, arrays or numbers. Compute haversine distance between coords (x1, y1) and (x2, y2)
