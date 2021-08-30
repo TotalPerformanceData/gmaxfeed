@@ -42,6 +42,7 @@ from .Utils import (listdir2,
                     read_json,
                     reformat_sectionals_list,
                     export_sectionals_to_xls,
+                    export_sectionals_to_csv,
                     read_url,
                     load_file,
                     process_url_response,
@@ -91,14 +92,14 @@ class RaceMetadata:
         return "< RaceMetadata - Races:{0} >".format(len(self._data))
     
     def set_filter(self,
-                   countries:list or set = None,
-                   courses:list or set = None,
-                   course_codes:list or set = None,
-                   published:bool = None,
-                   start_date:datetime or str = None,
-                   end_date:datetime or str = None,
-                   race_types:list or set = None,
-                   opts:dict = {}) -> None:
+                   countries: list or set = None,
+                   courses: list or set = None,
+                   course_codes: list or set = None,
+                   published: bool = None,
+                   start_date: datetime or str = None,
+                   end_date: datetime or str = None,
+                   race_types: list or set = None,
+                   opts: dict = {}) -> None:
         """
         set the internal filter using the named values or a dict of named values
 
@@ -141,14 +142,17 @@ class RaceMetadata:
             else:
                 raise Exception("key {0} given to RaceMetadata instance.set_filter(), not recognised as valid option".format(key))
     
-    def get(self, sharecode:str) -> dict or None:
+    def get(self, sharecode: str) -> dict or None:
         return self._data.get(sharecode)
     
     def clear(self) -> None:
         self._data = {}
         self._list = self._data
     
-    def import_data(self, data:list or dict = None, direc:str = None) -> None:
+    def import_data(self,
+                    data: list or dict = None,
+                    direc: str = None
+                    ) -> None:
         """
         add the races in data to self._data, takes either list of dicts, or dict mapping each sharecode -> race_metadata
         if data is None and a directory is passed instead (path to racelist folder) this contents of the folder are iterated and imported
@@ -173,10 +177,11 @@ class RaceMetadata:
         self._list = self._data
     
     def get_set(self,
-                countries:bool = True,
-                courses:bool = True,
-                course_codes:bool = True,
-                race_types:bool = True) -> dict:
+                countries: bool = True,
+                courses: bool = True,
+                course_codes: bool = True,
+                race_types: bool = True
+                ) -> dict:
         """
         get a set of all possible values within self._data for the given fields
         and return as dictionary of sets. Useful for passing "everything except" 
@@ -195,13 +200,15 @@ class RaceMetadata:
         return output
     
     def apply_filter(self,
-                     countries:list or set = None,
-                     courses:list or set = None,
-                     course_codes:list or set = None,
-                     published:bool = None,
-                     start_date:datetime or str = None,
-                     end_date:datetime or str = None,
-                     race_types:list or set = None) -> None:
+                     countries: list or set = None,
+                     courses: list or set = None,
+                     course_codes: list or set = None,
+                     published: bool = None,
+                     start_date: datetime or str = None,
+                     end_date: datetime or str = None,
+                     race_types: list or set = None,
+                     data: list or dict = None
+                     ) -> None:
         """
         filter the sharecodes within self._data by the given conditions
         passing sets will be much faster if giving long lists of options.
@@ -212,6 +219,8 @@ class RaceMetadata:
         start_date = datetime(2020, 1, 1, tzinfo = timezone.utc) # must be timezone aware as compared to race_data['PostTime'] parsed field
         end_date = datetime(2020, 1, 1, tzinfo = timezone.utc)
         """
+        if data is not None:
+            self.import_data(data = data)
         countries = countries or self._filter.get('countries')
         courses = courses or self._filter.get('courses')
         course_codes = course_codes or self._filter.get('course_codes')
@@ -248,16 +257,6 @@ class RaceMetadata:
                         continue
                 self._list[sc] = row
 
-    
-def _apply_filter(sharecodes:dict, filter:RaceMetadata) -> None:
-    """
-    when filtering data using the RaceMetadata class, set the filters using filter.set_filter(),
-    and then pass the sharecodes and RaceMetadata object to this.
-    sharecodes must be a dicts of all the metadata if passing to this func
-    """
-    filter.import_data(data = sharecodes)
-    filter.apply_filter()
-
 
 class GmaxFeed:
     """
@@ -265,17 +264,17 @@ class GmaxFeed:
     if licence key not passed on instantiation checks for a licence key in env called 'GMAXLICENCE'
     """
     def __init__(self, 
-                 licence:str = None,
-                 fixtures_path:str = None,
-                 racelist_path:str = None, 
-                 sectionals_path:str = None, 
-                 gps_path:str = None, 
-                 route_path:str = None,
-                 sectionals_history_path:str = None,
-                 sectionals_raw_path:str = None,
-                 jumps_path:str = None,
-                 performance_path:str = None) -> None:
-        self.set_licence(licence = licence)
+                 licence: str = None,
+                 fixtures_path: str = None,
+                 racelist_path: str = None, 
+                 sectionals_path: str = None, 
+                 gps_path: str = None, 
+                 route_path: str = None,
+                 sectionals_history_path: str = None,
+                 sectionals_raw_path: str = None,
+                 jumps_path: str = None,
+                 performance_path: str = None) -> None:
+        self.licence = licence
         self.set_fixtures_path(path = fixtures_path)
         self.set_racelist_path(path = racelist_path)
         self.set_gps_path(path = gps_path)
@@ -286,13 +285,25 @@ class GmaxFeed:
         self.set_jumps_path(path = jumps_path)
         self.set_tracker_performance_path(path = performance_path)
         if not self:
-            logger.warning('No licence key set by GmaxFeed - pass licence = "my_licence" to constructor, or set GMAXLICENCE="my_licence" as environment variable')
-        
+            raise Exception("""No licence key set by GmaxFeed,
+                             pass licence = "my_licence" to constructor, or set
+                             GMAXLICENCE = "my_licence" as environment variable
+                             """)
+    
     def __bool__(self) -> bool:
-        return self.get_licence() is not None
+        return self.licence is not None
     
     def __repr__(self) -> str:
-        return "< GmaxFeed, valid:{0}>".format(bool(self))
+        return "< GmaxFeed >"
+    
+    @property
+    def licence(self) -> str:
+        return os.environ.get("GMAXLICENCE")
+    
+    @licence.setter
+    def licence(self, licence: str = None) -> None:
+        if licence is not None:
+            os.environ["GMAXLICENCE"] = licence
     
     def _confirm_exists(self, path:str) -> bool:
         if not os.path.exists(path):
@@ -302,44 +313,37 @@ class GmaxFeed:
         self._fixtures_path = path or os.environ.get('FIXTURES_PATH') or 'fixtures'
         self._confirm_exists(self._fixtures_path)
     
-    def set_racelist_path(self, path:str=None) -> None:
+    def set_racelist_path(self, path:str = None) -> None:
         self._racelist_path = path or os.environ.get('RACELIST_PATH') or 'racelist'
         self._confirm_exists(self._racelist_path)
     
-    def set_sectionals_path(self, path:str=None) -> None:
+    def set_sectionals_path(self, path:str = None) -> None:
         self._sectionals_path = path or os.environ.get('SEC_PATH') or 'sectionals'
         self._confirm_exists(self._sectionals_path)
     
-    def set_gps_path(self, path:str=None) -> None:
+    def set_gps_path(self, path:str = None) -> None:
         self._gps_path = path or os.environ.get('GPS_PATH') or 'gpsData'
         self._confirm_exists(self._gps_path)
     
-    def set_route_path(self, path:str=None) -> None:
+    def set_route_path(self, path:str = None) -> None:
         self._route_path = path or os.environ.get('ROUTE_PATH') or 'routes'
         self._confirm_exists(self._route_path)
     
-    def set_sectionals_history_path(self, path:str=None) -> None:
+    def set_sectionals_history_path(self, path:str = None) -> None:
         self._sectionals_history_path = path or os.environ.get('SEC_HIST_PATH') or 'sectionals-hist'
         self._confirm_exists(self._sectionals_history_path)
     
-    def set_sectionals_raw_path(self, path:str=None) -> None:
+    def set_sectionals_raw_path(self, path:str = None) -> None:
         self._sectionals_raw_path = path or os.environ.get('SEC_RAW_PATH') or 'sectionals-raw'
         self._confirm_exists(self._sectionals_raw_path)
     
-    def set_jumps_path(self, path:str=None) -> None:
+    def set_jumps_path(self, path:str = None) -> None:
         self._jumps_path = path or os.environ.get('JUMPS_PATH') or 'jumps'
         self._confirm_exists(self._jumps_path)
     
-    def set_tracker_performance_path(self, path:str=None) -> None:
+    def set_tracker_performance_path(self, path:str = None) -> None:
         self._errors_path = path or os.environ.get('PERFORMANCE_PATH') or 'tracker-errors'
         self._confirm_exists(self._errors_path)
-    
-    def set_licence(self, licence:str=None) -> None:
-        if "GMAXLICENCE" not in os.environ and licence is not None:
-            os.environ["GMAXLICENCE"] = licence
-        
-    def get_licence(self) -> str or None:
-        return os.environ.get("GMAXLICENCE")
     
     def get_fixtures(self, date: str = None, new: bool = False, offline: bool = False) -> list or False:
         """
@@ -376,11 +380,16 @@ class GmaxFeed:
                     return data
         # if data is None file doesn't exist, try downloading a new file if offline is False
         if not offline:
-            url = 'https://www.gmaxequine.com/TPD/client/fixtures.ashx?DateLocal={0}&k={1}'.format(date_str, self.get_licence())
+            url = 'https://www.gmaxequine.com/TPD/client/fixtures.ashx?DateLocal={0}&k={1}'.format(date_str, self.licence)
             data = process_url_response(url = url, direc = self._fixtures_path, fname = date_str, version = 1) or False
         return data
     
-    def get_race(self, sharecode: str, date: str or datetime = None, new:bool = False, offline:bool = False) -> dict or False:
+    def get_race(self,
+                 sharecode: str,
+                 date: str or datetime = None,
+                 new:bool = False,
+                 offline:bool = False
+                 ) -> dict or False:
         """
         fetch the TPD/Gmax RaceList data for just the given sharecode.
         If 'date' is given that's used as the date to fetch from cache in 
@@ -418,14 +427,19 @@ class GmaxFeed:
                     return data.get(sharecode) or False
         # if data is None file doesn't exist, try downloading a new file if offline is False
         if not offline:
-            url = 'https://www.gmaxequine.com/TPD/client/racelist.ashx?Sharecode={0}&k={1}'.format(sharecode, self.get_licence())
+            url = 'https://www.gmaxequine.com/TPD/client/racelist.ashx?Sharecode={0}&k={1}'.format(sharecode, self.licence)
             # returns a list of 1 dict or empty list - process manually here as don't want to cache just one race
             txt = read_url(url)
             if txt:
                 data = {row['I']:row for row in json.loads(txt)}
         return data.get(sharecode) or False
     
-    def get_racelist(self, date:str or datetime = None, new:bool = False, offline:bool = False, sharecode:str = None) -> dict:
+    def get_racelist(self,
+                     date: str or datetime = None,
+                     new: bool = False,
+                     offline: bool = False,
+                     sharecode: str = None
+                     ) -> dict:
         """
         datestr format is '%Y-%m-%d'
         sometimes may want to query the metadata for a specific race, like when populating jumps data and checking the race is NH
@@ -451,7 +465,7 @@ class GmaxFeed:
                         return data
         # if data is None file doesn't exist, try downloading a new file if offline is False
         if not offline:
-            url = 'https://www.gmaxequine.com/TPD/client/racelist.ashx?DateLocal={0}&k={1}'.format(date, self.get_licence())
+            url = 'https://www.gmaxequine.com/TPD/client/racelist.ashx?DateLocal={0}&k={1}'.format(date, self.licence)
             # returns a list of dicts
             data = process_url_response(url = url, direc = self._racelist_path, fname = date, version = 2)
         if sharecode is not None:
@@ -459,7 +473,12 @@ class GmaxFeed:
         else:
             return data
     
-    def get_racelist_range(self, start_date:datetime or str = None, end_date:datetime or str = None, new:bool = False, offline:bool = False) -> dict:
+    def get_racelist_range(self,
+                           start_date: datetime or str = None,
+                           end_date: datetime or str = None,
+                           new: bool = False,
+                           offline: bool = False
+                           ) -> dict:
         if start_date is None:
             start_date = datetime(2016,1,1)
         else:
@@ -480,7 +499,7 @@ class GmaxFeed:
                 data.update(row)
         return data
     
-    def get_points(self, sharecode:str, new:bool = False, offline:bool = False) -> dict:
+    def get_points(self, sharecode: str, new: bool = False, offline: bool = False) -> dict:
         # return of {'sc':sharecode, 'data':data} for benefit of multithreading to easier group runners in same races
         data = None
         if not new:
@@ -488,36 +507,36 @@ class GmaxFeed:
             if data is not None:
                 return {'sc':sharecode, 'data':data}
         if not offline:
-            url = 'https://www.gmaxequine.com/TPD/client/points.ashx?Sharecode={0}&k={1}'.format(sharecode, self.get_licence())
+            url = 'https://www.gmaxequine.com/TPD/client/points.ashx?Sharecode={0}&k={1}'.format(sharecode, self.licence)
             # returns rows of dicts delimited by newline characters, r"\r\n", readlines() issue blank final element of list
             data = process_url_response(url = url, direc = self._gps_path, fname = sharecode, version = 3)
         return {'sc':sharecode, 'data':data}
     
-    def get_sectionals(self, sharecode:str, new:bool = False, offline:bool = False) -> dict:
+    def get_sectionals(self, sharecode: str, new: bool = False, offline: bool = False) -> dict:
         data = None
         if not new:
             data = load_file(direc = self._sectionals_path, fname = sharecode)
             if data is not None:
                 return {'sc':sharecode, 'data':data}
         if not offline:
-            url = 'https://www.gmaxequine.com/TPD/client/sectionals.ashx?Sharecode={0}&k={1}'.format(sharecode, self.get_licence())
+            url = 'https://www.gmaxequine.com/TPD/client/sectionals.ashx?Sharecode={0}&k={1}'.format(sharecode, self.licence)
             # returns a list of dicts
             data = process_url_response(url = url, direc = self._sectionals_path, fname = sharecode, version = 1)
         return {'sc':sharecode, 'data':data}
     
-    def get_sectionals_history(self, sharecode:str, new:bool = False, offline:bool = False) -> dict:
+    def get_sectionals_history(self, sharecode: str, new: bool = False, offline: bool = False) -> dict:
         data = None
         if not new:
             data = load_file(direc = self._sectionals_history_path, fname = sharecode)
             if data is not None:
                 return {'sc':sharecode, 'data':data}
         if not offline:
-            url = 'https://www.gmaxequine.com/TPD/client/sectionals-history.ashx?Sharecode={0}&k={1}'.format(sharecode, self.get_licence())
+            url = 'https://www.gmaxequine.com/TPD/client/sectionals-history.ashx?Sharecode={0}&k={1}'.format(sharecode, self.licence)
             # returns a list of dicts
             data = process_url_response(url = url, direc = self._sectionals_history_path, fname = sharecode, version = 1)
         return {'sc':sharecode, 'data':data}
     
-    def get_sectionals_raw(self, sharecode:str, new:bool = False, offline:bool = False) -> dict:
+    def get_sectionals_raw(self, sharecode: str, new: bool = False, offline: bool = False) -> dict:
         # internal use only
         licence = os.environ.get('ALTLICENCE')
         data = None
@@ -533,7 +552,7 @@ class GmaxFeed:
             data = process_url_response(url = url, direc = self._sectionals_raw_path, fname = sharecode, version = 1)
         return {'sc':sharecode, 'data':data}
     
-    def get_tracker_performance(self, sharecode:str, new:bool = False, offline:bool = False) -> dict:
+    def get_tracker_performance(self, sharecode: str, new: bool = False, offline: bool = False) -> dict:
         # internal use only
         data = None
         if not new:
@@ -541,12 +560,12 @@ class GmaxFeed:
             if data is not None:
                 return {'sc':sharecode, 'data':data}
         if not offline:
-            url = 'https://www.gmaxequine.com/TPD/client/performance.ashx?Sharecode={0}&k={1}'.format(sharecode, self.get_licence())
+            url = 'https://www.gmaxequine.com/TPD/client/performance.ashx?Sharecode={0}&k={1}'.format(sharecode, self.licence)
             # returns a list of dicts
             data = process_url_response(url = url, direc = self._errors_path, fname = sharecode, version = 1)
         return {'sc':sharecode, 'data':data}
     
-    def get_obstacles(self, sharecode:str, new:bool = False, offline:bool = False) -> dict:
+    def get_obstacles(self, sharecode: str, new: bool = False, offline: bool = False) -> dict:
         metadata = self.get_race(sharecode = sharecode, offline = offline)
         if not metadata or 'RaceType' not in metadata or not any([x in metadata.get('RaceType') for x in ['Hurdle', 'Chase', 'NH Flat']]):
             return {'sc':sharecode, 'data':None}
@@ -556,16 +575,16 @@ class GmaxFeed:
             if data is not None:
                 return {'sc':sharecode, 'data':data}
         if not offline:
-            url = 'https://www.gmaxequine.com/TPD/client/jumps.ashx?Sharecode={0}&k={1}'.format(sharecode, self.get_licence())
+            url = 'https://www.gmaxequine.com/TPD/client/jumps.ashx?Sharecode={0}&k={1}'.format(sharecode, self.licence)
             # returns a list of dicts
             data = process_url_response(url = url, direc = self._jumps_path, fname = sharecode, version = 1)
         return {'sc':sharecode, 'data':data}
     
-    def get_route(self, course_codes:str or int = None, new:bool = False, offline:bool = False) -> str:
+    def get_route(self, course_codes: str or int = None, new: bool = False, offline: bool = False) -> str:
         # return dict of cc->string in kml format. Can be parsed easily using a lib like beautiful soup 4. Course file not available returns pointless msg "please check later"
         output = {}
         if course_codes is None:
-            course_codes = [1,3,4,6,11,12,14,17,19,23,24,30,35,37,40,43,46,47,53,57,58,59,61,64,71,72,73,74,75,76,77,78,79,80,81,82,83,84,90,91]
+            course_codes = [1,3,4,6,11,12,14,17,19,23,24,30,35,37,40,43,46,47,53,57,58,59,61,64,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,90,91]
         elif type(course_codes) in [str, int]:
             course_codes = [course_codes]
         course_codes = [str(i).zfill(2) for i in course_codes]
@@ -577,12 +596,18 @@ class GmaxFeed:
                     output[cc] = data
                     continue
             if not offline:
-                url = 'https://www.gmaxequine.com/TPD/client/routes.ashx?Racecourse={0}&k={1}'.format(cc, self.get_licence())
+                url = 'https://www.gmaxequine.com/TPD/client/routes.ashx?Racecourse={0}&k={1}'.format(cc, self.licence)
                 # returns a kml format text file
                 output[cc] = process_url_response(url = url, direc = self._route_path, fname = fname, version = 4)
         return output
     
-    def get_data(self, sharecodes:dict or list, request:set = {'sectionals', 'sectionals-raw', 'sectionals-history', 'points', 'obstacles'}, new:bool = False, offline:bool = False, filter:RaceMetadata = None) -> dict:
+    def get_data(self,
+                 sharecodes: dict or list,
+                 request: set = {'sectionals', 'sectionals-raw', 'sectionals-history', 'points', 'obstacles'},
+                 new: bool = False,
+                 offline: bool = False,
+                 filter: RaceMetadata = None
+                 ) -> dict:
         """
         pass dict of racelist data sc -> metadata. if list is passed instead assumed to be raceids and won't be filtered. 
         multithreaded entry point for getting big selection of data, downloading new if not present, else using cached version
@@ -590,8 +615,9 @@ class GmaxFeed:
         if type(sharecodes) is dict:
             if filter is None:
                 filter = RaceMetadata()
-                filter.set_filter(published = True) # think i forced this for the purpose of not requesting sectional and points for unpublished races, but sec-raw, obstacles and perf would still be valid
-            _apply_filter(sharecodes = sharecodes, filter = filter) # in place
+                if all([x not in request for x in ['sectionals-raw', 'sectionals-history', 'points', 'obstacles']]):
+                    filter.set_filter(published = True)
+            filter.apply_filter(data = sharecodes) # in place
             sharecodes = list(filter) # return keys from filter._list, post filtered
         elif not sharecodes:
             return {}
@@ -610,26 +636,50 @@ class GmaxFeed:
             output['performance'] = {row['sc']:row['data'] for row in apply_thread_pool(self.get_tracker_performance, sharecodes, new = new, offline = offline) if row['data']}
         return output
     
-    def update(self, start_date:datetime or str = None, end_date:datetime or str = None, request:set = {'sectionals', 'points'}, new:bool = False, offline:bool = False, filter:RaceMetadata = None) -> None:
+    def update(self,
+               start_date: datetime or str = None,
+               end_date: datetime or str = None,
+               request: set = {'sectionals', 'points'},
+               new: bool = False,
+               offline: bool = False,
+               filter: RaceMetadata = None
+               ) -> None:
         """
-        update all the cached file in daterange given, only refresh if new passed. racelists are always freshed if file mtime is less than a week after the date it refers
-        if licence key is only activated for one of the above feeds then make sure to pass only the request set you want, else unauthorsied feed/s or will have folder full of empty text files
+        update all the cached file in daterange given, only refresh if new passed. 
+        racelists are always freshed if file mtime is less than a week after the date it refers
+        if licence key is only activated for one of the above feeds then make sure 
+        to pass only the request set you want, else unauthorsied feed/s or will 
+        have folder full of empty text files
         """
         sharecodes = self.get_racelist_range(start_date = start_date, end_date = end_date, new = new, offline = offline)
         _ = self.get_data(sharecodes = sharecodes, request = request, new = new, offline = offline, filter = filter)
     
-    def load_all_sectionals(self, start_date:datetime = None, end_date:datetime = None, offline:bool = False, filter:RaceMetadata = None) -> dict:
+    def load_all_sectionals(self,
+                            start_date: datetime = None,
+                            end_date: datetime = None,
+                            offline: bool = False,
+                            filter: RaceMetadata = None,
+                            to_csv: bool = True,
+                            compression: str = None,
+                            fname: str = None
+                            ) -> dict:
         sharecodes = self.get_racelist_range(start_date = start_date, end_date = end_date, offline = offline)
         if filter is None:
             filter = RaceMetadata()
             filter.set_filter(published = True)
-        _apply_filter(sharecodes = sharecodes, filter = filter) # in place
+        filter.apply_filter(data = sharecodes) # in place
         sharecodes = {sc:filter.get(sc) for sc in filter} # return keys from filter._list, post filtered
         sects = self.get_data(sharecodes = sharecodes, request = {'sectionals'}).get('sectionals')
-        for sc in sects:
-            sharecodes[sc]['sectionals'] = reformat_sectionals_list(sects[sc])
-        data = export_sectionals_to_xls(sharecodes)
-        return data
+        if to_csv:
+            sectionals = []
+            for s in sects.values():
+                sectionals.extend(s)
+            export_sectionals_to_csv(sectionals = sectionals, fname = fname, compression = compression)
+        else:
+            for sc in sects:
+                sharecodes[sc]['sectionals'] = reformat_sectionals_list(sects[sc])
+            data = export_sectionals_to_xls(sharecodes)
+            return data
 
 # TODO to be completed
 class TPDFeed(GmaxFeed):
@@ -658,7 +708,7 @@ class TPDFeed(GmaxFeed):
             logger.warning('No licence key set by GmaxFeed - pass licence = "my_licence" to constructor, or set GMAXLICENCE="my_licence" as environment variable')
         
     def __bool__(self) -> bool:
-        return self.get_licence() is not None and self.get_tpd_auth() is not None
+        return self.licence is not None and self.get_tpd_auth() is not None
     
     def __repr__(self) -> str:
         return "< TPDFeed, valid:{0}>".format(bool(self))

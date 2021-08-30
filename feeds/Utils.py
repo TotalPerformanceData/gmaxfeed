@@ -472,6 +472,7 @@ def export_sectionals_to_xls(sharecodes: dict) -> None:
     df.to_excel('tpd_sectionals.xlsx')
     return data
 
+<<<<<<< HEAD
 def route_xml_to_json(x: str or bytes) -> list:
     """
     convert the Gmax racecourse survey KML file into a nested json dict.
@@ -562,6 +563,38 @@ def route_xml_to_json(x: str or bytes) -> list:
                 logger.warning("unexpected placemark name in course: {0}".format(course_name))
         output.append(track_type_output)
     return output
+
+def last_tracker_use(data: list, fname: str = None) -> pd.DataFrame:
+    """
+    get date of latest usage of each tracker from performance feed
+
+    Parameters
+    ----------
+    data : list
+        list of records from performance feed.
+    fname : str, optional
+        DESCRIPTION. The default is None.
+
+    Returns
+    -------
+    pd.DataFrame
+    """
+    trackers = {}
+    for row in data:
+        date = row["I"][2:14]
+        t1 = row.get("ID1")
+        t2 = row.get("ID2")
+        for t in [t1, t2]:
+            if t and "Unknown" not in t:
+                if t not in trackers:
+                    trackers[t] = {"date": date, "code": t[-3:], "sharecode": row["I"]}
+                else:
+                    if date > trackers[t]["date"]:
+                       trackers[t] = {"date": date, "code": t[-3:], "sharecode": row["I"]}
+    for t in trackers:
+        trackers[t]["date"] = datetime.strptime(trackers[t]["date"], "%Y%m%d%H%M")
+    return pd.DataFrame.from_dict(trackers, orient = 'index')
+    #df.to_excel(fname or 'latest_tracker_uses.xlsx')
 
 def haversine(x1: np.ndarray,
               x2: np.ndarray,
