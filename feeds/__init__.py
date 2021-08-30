@@ -16,7 +16,6 @@ import dateutil.tz
 import dateutil.parser
 import logging.handlers
 
-
 if "MAIN_DIR" in os.environ:
     if os.environ["MAIN_DIR"] not in sys.path:
         sys.path.append(os.environ["MAIN_DIR"])
@@ -29,15 +28,27 @@ if not os.path.exists(LOGS_DIR):
     os.mkdir(LOGS_DIR)
 
 
-def get_logger(name:str, level = logging.INFO, handler_only: bool = False) -> logging.RootLogger:
+def get_logger(name: str,
+               level = logging.INFO,
+               handler_only: bool = False
+               ) -> logging.RootLogger:
     """
     function to return a new logger, as intend to have one logger for each file
-    Inputs:
-        name: str - the name for this logger, usually __name__ 
-        level: the level of the log, such as logging.INFO, .WARNING, etc
-        handler_only: bool - whtehr to return the handler only instead of full logger
-    Outputs:
-        logger - instance of logging.RootLogger
+
+    Parameters
+    ----------
+    name : str
+        the name for this logger, usually __name__
+    level : TYPE, optional
+        the level of the log, such as logging.INFO, logging.WARNING etc
+        the default is logging.INFO.
+    handler_only : bool, optional
+        whether to return the handler only instead of full logger.
+        The default is False.
+
+    Returns
+    -------
+    instance of logging.RootLogger, or logging handler
     """
     ch = logging.handlers.RotatingFileHandler(filename = os.path.join(LOGS_DIR, os.path.split(name)[1] + ".log"),
                                               maxBytes = 10**7,
