@@ -7,7 +7,7 @@ test the GmaxFeed functions
 
 @author: George
 """
-
+# TODO use unittest and do this properly with assertEqual etc
 import os
 from feeds.postrace_feeds import GmaxFeed, RaceMetadata
 from datetime import datetime, timezone
@@ -41,6 +41,10 @@ def test_get_fixtures(date: str = '2019-05-01'):
     data = gmax_feed.get_fixtures(date = date)
     print(len(data))
     return data
+
+def test_get_routes(course_codes = ["14", "3", "71", "30"]):
+    routes = gmax_feed.get_routes(course_codes = course_codes)
+    return routes
     
 if __name__ == '__main__':
     try:
@@ -66,4 +70,6 @@ if __name__ == '__main__':
     
     fixtures = test_get_fixtures()
     fixtures_upcoming = gmax_feed.get_fixtures()
+    
+    routes = test_get_routes()
     

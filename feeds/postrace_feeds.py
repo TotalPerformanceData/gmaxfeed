@@ -39,14 +39,15 @@ _par_dir, _ = os.path.split(_dir)
 
 from .Utils import (listdir2,
                     to_datetime,
-                    read_json,
+                    read_file,
                     reformat_sectionals_list,
                     export_sectionals_to_xls,
                     export_sectionals_to_csv,
                     read_url,
                     load_file,
                     process_url_response,
-                    apply_thread_pool)
+                    apply_thread_pool,
+                    route_xml_to_json)
 from datetime import datetime, timedelta, timezone
 from datetime import date as date_
 
@@ -164,7 +165,7 @@ class RaceMetadata:
                 return
             files = listdir2(direc)
             for file in files:
-                d = read_json(os.path.join(direc, file))
+                d = read_file(os.path.join(direc, file))
                 for sc in d:
                     self._data[sc] = d[sc]
         else:
@@ -580,26 +581,75 @@ class GmaxFeed:
             data = process_url_response(url = url, direc = self._jumps_path, fname = sharecode, version = 1)
         return {'sc':sharecode, 'data':data}
     
-    def get_route(self, course_codes: str or int = None, new: bool = False, offline: bool = False) -> str:
-        # return dict of cc->string in kml format. Can be parsed easily using a lib like beautiful soup 4. Course file not available returns pointless msg "please check later"
-        output = {}
-        if course_codes is None:
-            course_codes = [1,3,4,6,11,12,14,17,19,23,24,30,35,37,40,43,46,47,53,57,58,59,61,64,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,90,91]
-        elif type(course_codes) in [str, int]:
-            course_codes = [course_codes]
-        course_codes = [str(i).zfill(2) for i in course_codes]
-        for cc in course_codes:
-            fname = 'Racecourse-{0}.kml'.format(cc)
-            if not new:
-                data = load_file(direc = self._route_path, fname = fname)
-                if data is not None:
-                    output[cc] = data
-                    continue
-            if not offline:
-                url = 'https://www.gmaxequine.com/TPD/client/routes.ashx?Racecourse={0}&k={1}'.format(cc, self.licence)
-                # returns a kml format text file
-                output[cc] = process_url_response(url = url, direc = self._route_path, fname = fname, version = 4)
+    def get_route(self,
+                  course_code: str or int,
+                  new: bool = False,
+                  offline: bool = False
+                  ) -> dict:
+        """
+        save a KML file in route directory.
+        
+        returns a parsed version using Utils.route_xml_to_json function.
+
+        Parameters
+        ----------
+        course_code : str or int,
+            course code to fetch.
+        new : bool, optional
+            whether a new copy is fetched. The default is False.
+        offline : bool, optional
+            whether in offline mode. The default is False.
+
+        Returns
+        -------
+        dict : {"course_code": int, "data": str or False}
+        """
+        output = {"course_code": course_code, "data": False}
+        course_code = str(course_code).zfill(2)
+        fname = 'Racecourse-{0}.kml'.format(course_code)
+        if not new:
+            data = load_file(direc = self._route_path, fname = fname, is_json = False)
+            if data is not None:
+                output["data"] = data
+                return output
+        if not offline:
+            url = 'https://www.gmaxequine.com/TPD/client/routes.ashx?Racecourse={0}&k={1}'.format(course_code, self.licence)
+            # returns a kml encoded text file
+            output["data"] = process_url_response(url = url, direc = self._route_path, fname = fname, version = 4)
         return output
+    
+    def get_routes(self,
+                   course_codes: list = None,
+                   new: bool = False,
+                   offline: bool = False,
+                   processing_function = route_xml_to_json
+                   ) -> dict:
+        """
+        use threadpool to fetch route files for a list of courses.
+
+        Parameters
+        ----------
+        course_codes : list
+            list of course codes to fetch.
+        new : bool, optional
+            whether a new copy is fetched. The default is False.
+        offline : bool, optional
+            whether in offline mode. The default is False.
+        processing_function : function
+            the function to use to process the KML map file.
+            Default is Utils.route_xml_to_json
+
+        Returns
+        -------
+        dict
+            map of coursecode to list of track coordinates.
+        """
+        if not course_codes:
+            sharecodes = self.get_racelist_range(start_date = datetime.today() - timedelta(days = 365), 
+                                                 end_date = datetime.today(),
+                                                 offline = True)
+            course_codes = list(set([sc[:2] for sc in sharecodes]))
+        return {row["course_code"]: processing_function(row["data"]) for row in apply_thread_pool(self.get_route, course_codes, new = new, offline = offline) if row["data"]}
     
     def get_data(self,
                  sharecodes: dict or list,

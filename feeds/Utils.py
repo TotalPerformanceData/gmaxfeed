@@ -95,7 +95,7 @@ def to_datetime(d: datetime or int or float or str = None, tz = None):
             d = d.astimezone(dateutil.tz.UTC).replace(tzinfo = None)
         return d
 
-def read_json(path: str) -> dict or list:
+def read_file(path: str, is_json: bool = True) -> dict or list:
     """
     read a json file into python dict/list
 
@@ -103,6 +103,8 @@ def read_json(path: str) -> dict or list:
     ----------
     path : str
         path to json encoded file.
+    is_json : bool
+        whether the file is json encoded or not. Default is True
 
     Returns
     -------
@@ -111,8 +113,11 @@ def read_json(path: str) -> dict or list:
     """
     data = None
     if os.path.exists(path):
-        with open(path, 'r') as file:
-            data = json.load(file)
+        with open(path, 'r') as f:
+            if is_json:
+                data = json.load(f)
+            else:
+                data = f.read()
     return data
 
 def reformat_sectionals_list(data: list) -> dict:
@@ -174,7 +179,7 @@ def reformat_gps_list(data: list, by: str = 'T') -> dict:
         d[key] = {row[a]:row for row in data if row[by]==key}
     return d
 
-def load_file(direc: str, fname: str) -> dict or None:
+def load_file(direc: str, fname: str, is_json: bool = True) -> dict or None:
     """
     intermediary function for loading file 'fname' from directory 'direc'.
     fname must be a json encoded file.
@@ -185,13 +190,15 @@ def load_file(direc: str, fname: str) -> dict or None:
         directory from which to load file.
     fname : str
         fname to load from file.
+    is_json : bool
+        whether the file is json encoded or not. Default is True.
 
     Returns
     -------
     dict or None
     """
     path = os.path.join(direc, fname)
-    return read_json(path)
+    return read_file(path, is_json = is_json)
 
 def dump_file(data: dict or str or bytes,
               direc: str, 
@@ -226,9 +233,10 @@ def process_url_response(url: str,
     """
     little helper function to cut down on repeated code.
     
-    version 1 stores as is,
-    version 2 reformats to make I the index,
-    version 3 for converting rows of json string to list of json strings
+    version 1 given valid json string so stores as is,
+    version 2 reformats to make I the index from valid json string,
+    version 3 for converting rows of r"\r\n" delimited json string to list of dicts
+    version 4 for saving route file as given, XML encoded text
 
     Parameters
     ----------
@@ -245,19 +253,22 @@ def process_url_response(url: str,
     -------
     dict
     """
+    data = {}
     txt = read_url(url)
     if txt:
         if version == 1:
             data = json.loads(txt)
+            dump_file(data = data, direc = direc, fname = fname)
         elif version == 2:
             data = {row['I']:row for row in json.loads(txt)}
+            dump_file(data = data, direc = direc, fname = fname)
         elif version == 3:
             data = [json.loads(row) for row in txt.splitlines() if len(row) > 5]
-        else:
-            data = txt
-    else:
-        data = {}
-    dump_file(data = data, direc = direc, fname = fname)
+            dump_file(data = data, direc = direc, fname = fname)
+        elif version == 4:
+            if txt not in ["File not available - please contact us.", "Permission Denied", "{}"]:
+                data = txt
+                dump_file(data = data, direc = direc, fname = fname)
     return data
 
 def read_url(url: str = False, try_limit: int = 3) -> str or False:
@@ -398,6 +409,27 @@ def _compute_derivatives(data: dict, race_length: float) -> dict:
               'sections':sections
            }
 
+def export_sectionals_to_csv(sectionals: dict or list,
+                             fname: str = None,
+                             compression: str = None
+                             ) -> None:
+    """
+    export the given dictionary/list of sharecodes to csv format
+    
+    Parameters
+    ----------
+    sectionals : dict
+        dictionary or list of all sectionals to export as given by gmax API.
+    fname : str
+        name of the file to save under
+    compression: str
+        as per options for df.to_csv(compression = compression)
+    """
+    if type(sectionals) is dict:
+        sectionals = [row for row in sectionals.values()]
+    df = pd.DataFrame.from_records(sectionals)
+    df.to_csv(fname or 'tpd_sectionals.csv', compression = compression)
+
 def export_sectionals_to_xls(sharecodes: dict) -> None:
     """
     make pandas dataframe of TPD sectionals and then write it to an xls file.
@@ -486,9 +518,29 @@ def route_xml_to_json(x: str or bytes) -> list:
     list of nested dictionaries,
         a single nested dictionary is of format,
         {
+        "course_name": str,  # name of course file
+        "track_type": str,  # name of track type
+        "jumps": [],  # coords of obstacles
+        "running_line": []  # coords of running line
+        "winning_line": [],  # coords of finish line
+        }
         
+        a coordinate line element is of format,
+        {
+        "coordinates": [],  # list of coordinates records
+        "line_string_id": []  # should be unique and consistent as long as placemarker order in survey doesn't change'
+        }
+        
+        a coordinate record is of format,
+        {
+        "course_coordiantes_id": int  # course-wide unique ID for the coordinates, 
+        "X": float (double),  # longitude
+        "Y": float (double),  # latitude
+        "Z": float (double),  # elevation in meters, not expected to be accurate
         }
     """
+    if not x:
+        return None
     coords_id = 1
     
     def _handle_linestrings(line_strings: list) -> list:
@@ -508,19 +560,23 @@ def route_xml_to_json(x: str or bytes) -> list:
         nonlocal coords_id
         coords_output = []
         for idx, line_string in enumerate(line_strings, start = 1):
+            line_string_dict = {
+                "line_string_id": idx,  # line-string level unique ID
+                "coordinates": []
+                }
             if line_string.coordinates is not None:
-                coords = line_string.coordinates.text.strip().split(" ")
+                coords = line_string.coordinates.text.strip().split()
                 # coords exist as 3d trio including elevation (which is usually 0 or unusably inaccurate)
                 for coord_trio in coords:
                     X, Y, Z = coord_trio.split(",")
-                    coords_output.append({
+                    line_string_dict["coordinates"].append({
                         "X": float(X),  # longitude
                         "Y": float(Y),  # latitude
                         "Z": float(Z),  # elevation
-                        "course_coordinates_id": coords_id,  # course-level unique ID
-                        "line_string_id": idx  # line-string level unique ID
+                        "course_coordinates_id": coords_id  # course wide unique ID
                         })
                     coords_id += 1
+            coords_output.append(line_string_dict)
         return coords_output
     
     if type(x) in [str, bytes]:
