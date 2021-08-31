@@ -472,7 +472,6 @@ def export_sectionals_to_xls(sharecodes: dict) -> None:
     df.to_excel('tpd_sectionals.xlsx')
     return data
 
-<<<<<<< HEAD
 def route_xml_to_json(x: str or bytes) -> list:
     """
     convert the Gmax racecourse survey KML file into a nested json dict.
