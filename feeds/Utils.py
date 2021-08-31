@@ -17,6 +17,7 @@ import concurrent.futures
 import numpy as np
 import pandas as pd
 from datetime import datetime, date
+import bs4
 from bs4 import BeautifulSoup
 
 MAX_THREADS = 4
@@ -520,37 +521,36 @@ def route_xml_to_json(x: str or bytes) -> list:
         {
         "course_name": str,  # name of course file
         "track_type": str,  # name of track type
-        "jumps": [],  # coords of obstacles
-        "running_line": []  # coords of running line
-        "winning_line": [],  # coords of finish line
-        }
-        
-        a coordinate line element is of format,
-        {
-        "coordinates": [],  # list of coordinates records
-        "line_string_id": []  # should be unique and consistent as long as placemarker order in survey doesn't change'
-        }
-        
-        a coordinate record is of format,
-        {
-        "course_coordiantes_id": int  # course-wide unique ID for the coordinates, 
-        "X": float (double),  # longitude
-        "Y": float (double),  # latitude
-        "Z": float (double),  # elevation in meters, not expected to be accurate
+        "coordinates": {
+            "#JUMP": [],  # coords of obstacles
+            "#RUNNING_LINE": []  # coords of running line
+            "#WINNING_LINE": [{  # coords of finish line
+                "line_string_id": int,
+                "placemark_name": str,
+                "style_name": str,  # one of "#JUMP" "#WINNING_LINE" or "#RUNNING_LINE"
+                "coordinates": [{
+                    "course_coordinates_id": int,
+                    "X": double,  # lon
+                    "Y": double,  # lat
+                    "Z": double,  # elevation (meters above sea level)
+                    },
+                    {...},
+                    ],
+                }],
+            }
         }
     """
     if not x:
         return None
     coords_id = 1
     
-    def _handle_linestrings(line_strings: list) -> list:
+    def _handle_linestrings(placemark: bs4.element.Tag) -> list:
         """
-        handle a list of LineString tags as bs4 form, convert to json format
+        handle a placemark tag of LineString tags as bs4 form, convert to json format
 
         Parameters
         ----------
-        line_strings : list
-            list of LineString tags
+        placemark : Tag
 
         Returns
         -------
@@ -559,9 +559,17 @@ def route_xml_to_json(x: str or bytes) -> list:
         """
         nonlocal coords_id
         coords_output = []
+        # each coordinate line is stored in a LineString tag
+        line_strings = placemark.find_all("LineString")
+        style_name = placemark.find("styleUrl").text
+        if "#" not in style_name:
+            style_name = "#" + style_name
+        placemark_name = placemark.find("name").text
         for idx, line_string in enumerate(line_strings, start = 1):
             line_string_dict = {
                 "line_string_id": idx,  # line-string level unique ID
+                "placemark_name": placemark_name,
+                "style_name": style_name,  # will be useful for filtering coordinate types when have multiple running lines (lanes in USA/CA)
                 "coordinates": []
                 }
             if line_string.coordinates is not None:
@@ -597,25 +605,19 @@ def route_xml_to_json(x: str or bytes) -> list:
         track_type_output = {
             "course_name": course_name,
             "track_type": track_type_name,
-            "winning_line": [],
-            "running_line": [],
-            "jumps": []
+            "coordinates": {
+                "#RUNNING_LINE": [],
+                "#WINNING_LINE": [],
+                "#JUMP": []
+                }
             }
         # WINNING_LINE and RUNNING_LINE are stored in separate Placemark tags
         placemarks = folder.find_all("Placemark")
         for placemark in placemarks:
-            placemark_name = placemark.find("name").text
-            # each coordinate line is stored in a LineString tag
-            line_strings = placemark.find_all("LineString")
-            coord_trios = _handle_linestrings(line_strings = line_strings)
-            if placemark_name == "WINNING_LINE":
-                track_type_output["winning_line"].extend(coord_trios)
-            elif placemark_name == "RUNNING_LINE":
-                track_type_output["running_line"].extend(coord_trios)
-            elif "JUMP" in placemark_name:
-                track_type_output["jumps"].extend(coord_trios)
-            else:
-                logger.warning("unexpected placemark name in course: {0}".format(course_name))
+            style_name = placemark.find("styleUrl").text
+            if "#" not in style_name:
+                style_name = "#" + style_name
+            track_type_output["coordinates"][style_name].append(_handle_linestrings(placemark = placemark))
         output.append(track_type_output)
     return output
 
