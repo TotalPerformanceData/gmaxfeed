@@ -584,7 +584,7 @@ class GmaxFeed:
     def get_route(self,
                   course_code: str or int,
                   new: bool = False,
-                  offline: bool = False
+                  offline: bool = False,
                   ) -> dict:
         """
         save a KML file in route directory.
