@@ -20,7 +20,7 @@ from datetime import datetime, date
 import bs4
 from bs4 import BeautifulSoup
 
-MAX_THREADS = 4
+MAX_THREADS = 6
 
 from . import get_logger
 
@@ -307,8 +307,7 @@ def read_url(url: str = False, try_limit: int = 3) -> str or False:
 
 def apply_thread_pool(func,
                       iterable,
-                      new: bool = False,
-                      offline: bool = False
+                      **kwargs,
                       ) -> list:
     """
     apply a thread pool to the given func and iterable.
@@ -319,10 +318,16 @@ def apply_thread_pool(func,
         function to apply to each element of the given iterable.
     iterable : list or dict or set
         iterable of inputs for the given function.
+        
+    **params, passed onto func
     new : bool, optional
         whether to fetch a new copy of the data. The default is False.
     offline : bool, optional
         whether to not use internet for this request. The default is False.
+    no_return : bool, optional
+        whether to ignore returns for the func to save memory for file system
+        updates.
+        The default is False.
 
     Returns
     -------
@@ -331,10 +336,10 @@ def apply_thread_pool(func,
     threads = min([MAX_THREADS, len(iterable)])
     if threads > 1:
         with concurrent.futures.ThreadPoolExecutor(threads) as pool:
-            results = [pool.submit(func, x, new, offline) for x in iterable]
+            results = [pool.submit(func, x, **kwargs) for x in iterable]
         results = [res.result() for res in results]
     elif iterable:
-        results = [func(x, new, offline) for x in iterable]
+        results = [func(x, **kwargs) for x in iterable]
     else:
         results = []
     return results

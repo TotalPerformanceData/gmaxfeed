@@ -10,7 +10,7 @@ test the GmaxFeed functions
 # TODO use unittest and do this properly with assertEqual etc
 import os
 from feeds.postrace_feeds import GmaxFeed, RaceMetadata
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from loguru import logger
 
 logger.add(os.path.join('logs', 'test.log'), level='DEBUG', format="{time} {level} {message}")
@@ -72,4 +72,9 @@ if __name__ == '__main__':
     fixtures_upcoming = gmax_feed.get_fixtures()
     
     routes = test_get_routes()
+    
+    update_return = gmax_feed.update(start_date = datetime.today() - timedelta(days = 6),
+                                     end_date = datetime.today() - timedelta(days = 4),
+                                     request = {'sectionals', 'points'},
+                                     no_return = True)
     
