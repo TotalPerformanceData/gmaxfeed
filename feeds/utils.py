@@ -16,6 +16,7 @@ import concurrent
 import concurrent.futures
 import numpy as np
 import pandas as pd
+from copy import deepcopy
 from datetime import datetime, date
 import bs4
 from bs4 import BeautifulSoup
@@ -343,6 +344,54 @@ def apply_thread_pool(func,
     else:
         results = []
     return results
+
+def add_proportions(sectionals: list, inplace: bool = True) -> list:
+    """
+    add proportion of time/strides that each runner spends in each section, 
+    compared to that runner's final time and number of strides.
+    
+    sectionals should be validated as complete for each runner, and no 
+    repeated sections.
+    
+    sectionals are actually edited in place, unless specified inplace = False.
+
+    Parameters
+    ----------
+    sectionals : list
+        list of all gmax runner sectionals for some race, not nested, as records.
+    inplace : bool
+        if true, sectionals are altered inplace, else copy is returned.
+
+    Returns
+    -------
+    list
+        sectionals as given, with proportions fields 'prop_S' and 'prop_N' added.
+    """
+    runners = {}
+    runner_final_times = {}
+    runner_final_strides = {}
+    if not inplace:
+        sectionals = deepcopy(sectionals)
+    for row in sectionals:
+        if row["I"] not in runners:
+            runners[row["I"]] = []
+            runner_final_strides[row["I"]] = 0
+        runners[row["I"]].append(row)
+        runner_final_strides[row["I"]] += row.get("N", 0)
+        if row["G"] == "Finish":
+            runner_final_times[row["I"]] = row["R"]
+    for runner, sections in runners.items():
+        if runner not in runner_final_times:
+            continue
+        if 0 < sum(["N" in s for s in sections]) < len(sections):
+            continue
+        if any([s["D"] == 0 for s in sections]):
+            continue
+        for section in sections:
+            section["prop_S"] = section["S"] / runner_final_times[runner]
+            if runner_final_strides[runner]:
+                section["prop_N"] = section["N"] / runner_final_strides[runner]
+    return sectionals
 
 def validate_sectionals(data: list, handle_dups: bool = True) -> list:
     """

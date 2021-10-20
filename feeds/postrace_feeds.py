@@ -1078,6 +1078,7 @@ class GmaxFeed:
                end_date: datetime or str = None,
                request: set = {'sectionals', 'points'},
                filter: RaceMetadata = None,
+               update_before: datetime = None,
                **kwargs
                ) -> None:
         """
@@ -1098,6 +1099,9 @@ class GmaxFeed:
             The default is {'sectionals', 'points'}.
         filter : RaceMetadata, optional
             filter instance to use. The default is None.
+        update_before : datetime  # TODO
+            update all records matching filter where getmtime is before the 
+            given datetime.
         
         **params
         new : bool, optional
@@ -1108,7 +1112,7 @@ class GmaxFeed:
             The default is False.
         no_return : bool, optional
             return None from target funcs, save memory when just updating files.
-            The default is False.
+            The default is True, and will always be overridden to be True.
         """
         if start_date is None:
             start_date = datetime.now(tz = timezone.utc) - timedelta(days = 14)
@@ -1128,6 +1132,7 @@ class GmaxFeed:
             filter.set_filter(published = True)
         
         sharecodes = self.get_racelist_range(start_date = start_date, end_date = end_date, **kwargs)
+        kwargs["no_return"] = True
         _ = self.get_data(sharecodes = sharecodes, request = request, filter = filter, **kwargs)
     
     def load_all_sectionals(self,
