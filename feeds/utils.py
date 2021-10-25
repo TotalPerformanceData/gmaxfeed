@@ -380,6 +380,11 @@ def add_proportions(sectionals: list, inplace: bool = True) -> list:
         runner_final_strides[row["I"]] += row.get("N", 0)
         if row["G"] == "Finish":
             runner_final_times[row["I"]] = row["R"]
+        if row.get("D") and row.get("S"):
+            row["V"] = row["D"] / row["S"]
+            if row.get("N"):
+                row["SF"] = row["N"] / row["S"]
+                row["SL"] = row["D"] / row["N"]
     for runner, sections in runners.items():
         if runner not in runner_final_times:
             continue
