@@ -392,15 +392,19 @@ def convert_sectionals_to_1f(sectionals: list) -> list:
     """
     new_sects = []
     runners = set([row["I"] for row in sectionals])
-    gates = sorted(list(set([row["G"] for row in sectionals if int(_gate_num(row["G"])) == _gate_num(row["G"])])),
-                   key = _gate_num,
-                   reverse = True)
-    for gate in gates:
+    all_gates = list(set([row["G"] for row in sectionals]))
+    fur_gates = sorted([g for g in all_gates if int(_gate_num(g)) == _gate_num(g)],
+                        key = _gate_num,
+                        reverse = True)
+    for gate in fur_gates:
         for runner in runners:
+            runner_sects = [row for row in sectionals if row["I"] == runner]
+            runner_gates = set([row["G"] for row in runner_sects])
+            if len(runner_gates) != len(all_gates):
+                continue # remove runners where end is cut off (usually tailed off)
             gate_number = _gate_num(gate)
             upper_gate_number = int(gate_number) + 1
-            sects = [row for row in sectionals if
-                     row["I"] == runner and
+            sects = [row for row in runner_sects if
                      gate_number <= _gate_num(row["G"]) < upper_gate_number]
             if sects:
                 new_sects.append({
