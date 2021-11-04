@@ -8,6 +8,7 @@ Created on Fri Oct 6 2020
 """
 
 import os
+import re
 import json
 import time
 import requests
@@ -62,6 +63,31 @@ def _gate_num(x: str) -> float:
         furlongs from finish.
     """
     return float(x.replace('f','').replace('Finish','0').replace('F',''))
+
+def reduce_racetype(racetype: str) -> str:
+    """
+    from a Gmax RaceType in the racelist packet, remove specific lanes and
+    run-up information. eg,
+    
+    Del Mar 1M Lane 4 (+30ft) OLD -> Del Mar 1M
+    
+    useful for grouping races on seldom run distances to get more observations
+    for sectional averages.
+    
+    Parameters
+    ----------
+    racetype : str
+        Gmax RaceType label, from the racelist feed.
+
+    Returns
+    -------
+    str
+        a more concise racetype, if too much detail given
+    """
+    racetype = re.sub(" Lane [0-9]", "", racetype)
+    racetype = re.sub("\((.*?)\)", "", racetype)
+    racetype = re.sub("(Legacy|legacy|OLD|old)", "", racetype)
+    return racetype.strip()
 
 def to_datetime(d: datetime or int or float or str = None, tz = None):
     """
