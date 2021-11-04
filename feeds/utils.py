@@ -371,6 +371,50 @@ def apply_thread_pool(func,
         results = []
     return results
 
+def convert_sectionals_to_1f(sectionals: list) -> list:
+    """
+    convert a list of sectional records into the 1f interval UK format.
+    used for bring the USA format into more consistent format until a fix can
+    be applied at source to allow the user to specify the interval.
+
+    note, only 0.5f interval is supported yet # TODO
+
+    Parameters
+    ----------
+    sectionals : list
+        list of gmax sectionals with intervals not equal to 1f.
+
+    Returns
+    -------
+    list
+        new sectionals with interval equal to 1f, and the remainder placed
+        at the start of the race.
+    """
+    new_sects = []
+    runners = set([row["I"] for row in sectionals])
+    gates = sorted(list(set([row["G"] for row in sectionals if int(_gate_num(row["G"])) == _gate_num(row["G"])])),
+                   key = _gate_num,
+                   reverse = True)
+    for gate in gates:
+        for runner in runners:
+            gate_number = _gate_num(gate)
+            upper_gate_number = int(gate_number) + 1
+            sects = [row for row in sectionals if
+                     row["I"] == runner and
+                     gate_number <= _gate_num(row["G"]) < upper_gate_number]
+            if sects:
+                new_sects.append({
+                    "I": sects[0]["I"],
+                    "G": min([row["G"] for row in sects], key = _gate_num),
+                    "L": min([row["L"] for row in sects]),
+                    "S": sum([row["S"] for row in sects]),
+                    "R": max([row["R"] for row in sects]),
+                    "B": min(sects, key = lambda row: row["L"])["B"],
+                    "D": sum([row["D"] for row in sects]),
+                    "N": sum([row.get("N") or 0 for row in sects])
+                    })
+    return new_sects
+
 def add_proportions(sectionals: list, inplace: bool = True) -> list:
     """
     add proportion of time/strides that each runner spends in each section, 
