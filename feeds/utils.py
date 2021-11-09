@@ -472,7 +472,11 @@ def add_proportions(sectionals: list, inplace: bool = True) -> list:
                 section["prop_N"] = section["N"] / runner_final_strides[runner]
     return sectionals
 
-def validate_sectionals(data: list, handle_dups: bool = True) -> list:
+def validate_sectionals(data: list,
+                        handle_dups: bool = True,
+                        remove_dups: bool = True,
+                        remove_incomplete: bool = True,
+                        ) -> list:
     """
     check the sectionals for duplicates and missing sections.
     if a duplicate is found, usually if a horse's gate is split in two, and
@@ -485,6 +489,12 @@ def validate_sectionals(data: list, handle_dups: bool = True) -> list:
         list of sectional data for some race
     handle_dups : bool, optional
         whether to add duplicated sections together. The default is True.
+    remove_dups : bool, optional
+        whether to remove horses which have duplicate sections.
+        The default is True.
+    remove_incomplete : bool, optional
+        whether to remove horses which have incomplete sections.
+        The default is True.
 
     Returns
     -------
@@ -492,26 +502,111 @@ def validate_sectionals(data: list, handle_dups: bool = True) -> list:
         list of validated sectional data for some race.
     """
     if data:
-        unique_tuples = set([(row["I"], row["G"]) for row in data])
-        if len(unique_tuples) != len(data):
-            logger.warning("Duplicate runner section warning, checking to see which runner and gate...")
-            runners = set([row['I'] for row in data])
-            new_data = {}
-            for runner in runners:
-                for row in data:
-                    if row["I"] == runner:
-                        key = (row["I"], row["G"])
-                        if key in new_data:
-                            logger.warning("duplicate gate found: runner: {0} gate: {1}. Attempting to fix by addition...".format(row["I"], row["G"]))
-                            if False: #new_data[key]["S"] < 2. or row["S"] < 2.:
-                                logger.warning("fixing by addition: {0} + {1}".format(new_data[key], row))
-                                for k, v in row.items():
-                                    if k in {'S', 'R', 'D', 'N'}:
-                                        new_data[key][k] += v
-                        else:
-                            new_data[key] = row
-            data = [row for row in new_data.values()]
+        if False: #handle_dups:
+            unique_tuples = set([(row["I"], row["G"]) for row in data])
+            if len(unique_tuples) != len(data):
+                logger.warning("Duplicate runner section warning, checking to see which runner and gate...")
+                runners = set([row['I'] for row in data])
+                new_data = {}
+                for runner in runners:
+                    for row in data:
+                        if row["I"] == runner:
+                            key = (row["I"], row["G"])
+                            if key in new_data:
+                                logger.warning("duplicate gate found: runner: {0} gate: {1}. Attempting to fix by addition...".format(row["I"], row["G"]))
+                                if False: #new_data[key]["S"] < 2. or row["S"] < 2.:
+                                    logger.warning("fixing by addition: {0} + {1}".format(new_data[key], row))
+                                    for k, v in row.items():
+                                        if k in {'S', 'R', 'D', 'N'}:
+                                            new_data[key][k] += v
+                            else:
+                                new_data[key] = row
+                data = [row for row in new_data.values()]
+        if remove_dups:
+            runners = {row["I"]: set() for row in data}
+            remove_runners = set()
+            for row in data:
+                if row["G"] not in runners[row["I"]]:
+                    runners[row["I"]].add(row["G"])
+                else:
+                    logger.warning("runner {0} found with duplicate gates, removing from sectionals".format(row["I"]))
+                    remove_runners.add(row["I"])
+            if remove_runners:
+                data = [row for row in data if row["I"] not in remove_runners]
+        if remove_incomplete:
+            runners = {row["I"]: [] for row in data}
+            for row in data:
+                runners[row["I"]].append(row)
+            expected_records = np.median([len(r) for r in runners.values()])
+            for runner, records in runners.items():
+                if len(records) != expected_records:
+                    logger.warning("runner {0} found with missing gates, removing from sectionals".format(runner))
+                    data = [row for row in data if row["I"] != runner]
     return data
+
+def compute_overall_race_metrics(sectionals: list,
+                                 race_length: float = None,
+                                 ignore_first: bool = True,
+                                 func = None
+                                 ) -> list:
+    """
+    use gmax sectionals to compute the overall race metrics, such as overall time,
+    overall average stride length and stride frequency, ignoring the opening gate
+    if ignore_first.
+
+    Parameters
+    ----------
+    sectionals : list
+        list of Gmax/TPD sectional records.
+    race_length : float, optional
+        distance of the race.
+        The default is None, and is taken as max P remaining from sectionals.
+    ignore_first : bool
+        whether to ignore the opening section when computing the stride data.
+        The default is True.
+    func : function
+        optional additional custom smoothing/processing function to apply to 
+        sectionals. not inplace.
+
+    Returns
+    -------
+    list
+    """
+    sectionals = validate_sectionals(data = sectionals)
+    add_proportions(sectionals, inplace = True)
+    if func is not None:
+        sectionals = func(sectionals)
+    metrics = []
+    runners = set([row["I"] for row in sectionals])
+    max_gate = max([row["G"] for row in sectionals],
+                   key = _gate_num)
+    for runner in runners:
+        data = [row for row in sectionals if row["I"] == runner]
+        if ignore_first:
+            distance_ran = sum([row.get("D", 0) for row in data if row["G"] != max_gate])
+            number_strides = sum([row.get("N", 0) for row in data if row["G"] != max_gate])
+            time = sum([row.get("S", 0) for row in data if row["G"] != max_gate])
+        else:
+            distance_ran = sum([row.get("D", 0) for row in data])
+            number_strides = sum([row.get("N", 0) for row in data])
+            time = sum([row.get("S", 0) for row in data])
+        finish_time = sum([row.get("R", 0) for row in data if row["G"] == "Finish"]) or None
+        final_2f_time = sum([row.get("S", 0) for row in data if _gate_num(row["G"]) <= 2.])
+        final_2f_distance = sum([row.get("D", 0) for row in data if _gate_num(row["G"]) <= 2.])
+        finish_speed_perc = (final_2f_distance / final_2f_time) / (distance_ran / time)
+        metrics.append({
+            "sharecode": runner,
+            "distance_ran": distance_ran,
+            "number_strides": number_strides,
+            "time": time,
+            "stride_length": distance_ran / number_strides,
+            "stride_frequency": number_strides / time,
+            "finish_time": finish_time,
+            "final_2f_distance": final_2f_distance,
+            "final_2f_time": final_2f_time,
+            "finish_speed_percentage": finish_speed_perc,
+            })
+    return metrics
 
 def _compute_derivatives(data: dict, race_length: float) -> dict:
     """
@@ -520,14 +615,13 @@ def _compute_derivatives(data: dict, race_length: float) -> dict:
     Parameters
     ----------
     data : dict
-        DESCRIPTION.
+        sectionals data for a runner, in dict form mapping gate to data.
     race_length : float
-        DESCRIPTION.
+        total race length in meters.
 
     Returns
     -------
     dict
-        DESCRIPTION.
     """
     average_sl = np.sum([gate['D'] for gate in data.values()]) / np.sum([gate['N'] for gate in data.values() if 'N' in gate and gate['D'] > 0])
     average_sf = np.sum([gate['N'] for gate in data.values() if 'N' in gate]) / data['Finish']['R']
@@ -536,12 +630,12 @@ def _compute_derivatives(data: dict, race_length: float) -> dict:
     fin_perc = 100 * fin_speed / av_speed
     sections = {gate['G']:gate for gate in data.values()}
     return {
-              'finish_time':data['Finish']['R'],
-              'average_sl':average_sl,
-              'average_sf':average_sf,
-              'finish_perc':fin_perc,
-              'sections':sections
-           }
+        'finish_time': data['Finish']['R'],
+        'average_sl': average_sl,
+        'average_sf': average_sf,
+        'finish_perc': fin_perc,
+        'sections': sections
+        }
 
 def export_sectionals_to_csv(sectionals: dict or list,
                              fname: str = None,
