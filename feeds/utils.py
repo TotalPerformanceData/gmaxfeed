@@ -576,6 +576,8 @@ def compute_overall_race_metrics(sectionals: list,
     add_proportions(sectionals, inplace = True)
     if func is not None:
         sectionals = func(sectionals)
+    if not sectionals:
+        return []
     metrics = []
     runners = set([row["I"] for row in sectionals])
     max_gate = max([row["G"] for row in sectionals],
