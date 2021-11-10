@@ -863,7 +863,7 @@ class GmaxFeed:
         data = None
         if not new:
             data = load_file(direc = self._errors_path, fname = sharecode)
-            if data is not None:
+            if data is not None and any([row.get("RX") for row in data]):
                 if no_return:
                     data = None
                 return {'sc':sharecode, 'data':data}

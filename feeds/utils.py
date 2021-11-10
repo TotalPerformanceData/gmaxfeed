@@ -596,7 +596,7 @@ def compute_overall_race_metrics(sectionals: list,
         final_2f_distance = sum([row.get("D", 0) for row in data if _gate_num(row["G"]) <= 2.])
         finish_speed_perc = (final_2f_distance / final_2f_time) / (distance_ran / time)
         metrics.append({
-            "sharecode": runner,
+            "runner_sharecode": runner,
             "distance_ran": distance_ran,
             "number_strides": number_strides,
             "time": time,
