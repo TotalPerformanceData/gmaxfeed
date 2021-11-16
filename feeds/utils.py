@@ -109,7 +109,7 @@ def to_datetime(d: datetime or int or float or str = None, tz = None):
     if type(d) is str:
         d = dateutil.parser.parse(d)
     elif type(d) is date:
-        d = datetime.combine(date, datetime.min.time())
+        d = datetime.combine(d, datetime.min.time())
     elif type(d) in [float, int]:
         if d > 2051222400: # probably given in milliseconds
             d = d / 1000

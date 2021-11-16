@@ -10,7 +10,7 @@ import os
 import sys
 import logging
 
-# to initialise subpackages which aren't automatically imported by just the top level
+# initialise subpackages which aren't automatically imported by just the top level import statement
 import dateutil
 import dateutil.tz
 import dateutil.parser
@@ -50,10 +50,12 @@ def get_logger(name: str,
     -------
     instance of logging.RootLogger, or logging handler
     """
-    ch = logging.handlers.RotatingFileHandler(filename = os.path.join(LOGS_DIR, os.path.split(name)[1] + ".log"),
-                                              maxBytes = 10**7,
-                                              backupCount = 10)
-    ch.setLevel(logging.INFO)
+    ch = logging.handlers.RotatingFileHandler(
+        filename = os.path.join(LOGS_DIR, os.path.split(name)[1] + ".log"),
+        maxBytes = 10**7,
+        backupCount = 10
+        )
+    ch.setLevel(level)
     formatter = logging.Formatter("%(asctime)s - File:%(filename)s - Line:%(lineno)d - %(levelname)s | %(message)s")
     ch.setFormatter(formatter)
     if handler_only:
@@ -63,4 +65,3 @@ def get_logger(name: str,
         logger.setLevel(level)
         logger.addHandler(ch)
         return logger
-
