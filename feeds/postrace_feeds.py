@@ -36,6 +36,7 @@ import json
 
 from .utils import (listdir2,
                     to_datetime,
+                    check_file_exists,
                     read_file,
                     reformat_sectionals_list,
                     export_sectionals_to_xls,
@@ -479,7 +480,10 @@ class GmaxFeed:
             mtime = datetime.fromtimestamp(os.path.getmtime(path))
             limit_date = date + timedelta(days = 6)
             if (not new and mtime > limit_date) or offline:
-                data = load_file(direc = self._fixtures_path, fname = date_str)
+                if no_return:
+                    data = check_file_exists(direc = self._fixtures_path, fname = date_str)
+                else:
+                    data = load_file(direc = self._fixtures_path, fname = date_str)
                 if data is not None:
                     return data
         # if data is None file doesn't exist, try downloading a new file if offline is False
@@ -628,9 +632,9 @@ class GmaxFeed:
         Parameters
         ----------
         start_date : datetime or str, optional
-            DESCRIPTION. The default is None.
+            lower date boundary, inclusive. The default is None.
         end_date : datetime or str, optional
-            DESCRIPTION. The default is None.
+            upper date boundary, inclusive. The default is None.
         
         **params
         new : bool, optional
@@ -647,7 +651,7 @@ class GmaxFeed:
         new = kwargs.get("new")
         offline = kwargs.get("offline")
         if start_date is None:
-            start_date = datetime(2016,1,1)
+            start_date = datetime(2016, 1, 1)
         else:
             start_date = to_datetime(start_date)
         if end_date is None:
@@ -656,9 +660,9 @@ class GmaxFeed:
             end_date = to_datetime(end_date)
         if end_date < start_date:
             end_date = start_date
-        end_date += timedelta(days=1) # to include last date in range
+        end_date += timedelta(days = 1) # to include last date in range
         range_ = (end_date - start_date).days
-        dates = [start_date + timedelta(days=dt) for dt in range(0, range_, 1)]
+        dates = [start_date + timedelta(days = dt) for dt in range(0, range_, 1)]
         result = apply_thread_pool(self.get_racelist, dates, new = new, offline = offline)
         data = {}
         for row in result:
@@ -695,16 +699,19 @@ class GmaxFeed:
         no_return = kwargs.get("no_return")
         data = None
         if not new:
-            data = load_file(direc = self._gps_path, fname = sharecode)
+            if no_return:
+                data = check_file_exists(direc = self._gps_path, fname = sharecode)
+            else:
+                data = load_file(direc = self._gps_path, fname = sharecode)
             if data is not None:
-                return {'sc':sharecode, 'data':data}
+                return {'sc': sharecode, 'data': data}
         if not offline:
             url = 'https://www.gmaxequine.com/TPD/client/points.ashx?Sharecode={0}&k={1}'.format(sharecode, self.licence)
             # returns rows of dicts delimited by newline characters, r"\r\n", readlines() issue blank final element of list
             data = process_url_response(url = url, direc = self._gps_path, fname = sharecode, version = 3)
         if no_return:
             data = None
-        return {'sc':sharecode, 'data':data}
+        return {'sc': sharecode, 'data': data}
     
     def get_sectionals(self, sharecode: str, **kwargs) -> dict:
         """
@@ -735,16 +742,19 @@ class GmaxFeed:
         no_return = kwargs.get("no_return")
         data = None
         if not new:
-            data = load_file(direc = self._sectionals_path, fname = sharecode)
+            if no_return:
+                data = check_file_exists(direc = self._sectionals_path, fname = sharecode)
+            else:
+                data = load_file(direc = self._sectionals_path, fname = sharecode)
             if data is not None:
-                return {'sc':sharecode, 'data':data}
+                return {'sc': sharecode, 'data': data}
         if not offline:
             url = 'https://www.gmaxequine.com/TPD/client/sectionals.ashx?Sharecode={0}&k={1}'.format(sharecode, self.licence)
             # returns a list of dicts
             data = process_url_response(url = url, direc = self._sectionals_path, fname = sharecode, version = 1)
         if no_return:
             data = None
-        return {'sc':sharecode, 'data':data}
+        return {'sc': sharecode, 'data': data}
     
     def get_sectionals_history(self, sharecode: str, **kwargs) -> dict:
         """
@@ -775,16 +785,19 @@ class GmaxFeed:
         no_return = kwargs.get("no_return")
         data = None
         if not new:
-            data = load_file(direc = self._sectionals_history_path, fname = sharecode)
+            if no_return:
+                data = check_file_exists(direc = self._sectionals_history_path, fname = sharecode)
+            else:
+                data = load_file(direc = self._sectionals_history_path, fname = sharecode)
             if data is not None:
-                return {'sc':sharecode, 'data':data}
+                return {'sc': sharecode, 'data': data}
         if not offline:
             url = 'https://www.gmaxequine.com/TPD/client/sectionals-history.ashx?Sharecode={0}&k={1}'.format(sharecode, self.licence)
             # returns a list of dicts
             data = process_url_response(url = url, direc = self._sectionals_history_path, fname = sharecode, version = 1)
         if no_return:
             data = None
-        return {'sc':sharecode, 'data':data}
+        return {'sc': sharecode, 'data': data}
     
     def get_sectionals_raw(self, sharecode: str, **kwargs) -> dict:
         """
@@ -817,20 +830,21 @@ class GmaxFeed:
         licence = os.environ.get('ALTLICENCE')
         data = None
         if licence is None:
-            return {'sc':sharecode, 'data':None}
+            return {'sc': sharecode, 'data': None}
         if not new:
-            data = load_file(direc = self._sectionals_raw_path, fname = sharecode)
+            if no_return:
+                data = check_file_exists(direc = self._sectionals_raw_path, fname = sharecode)
+            else:
+                data = load_file(direc = self._sectionals_raw_path, fname = sharecode)
             if data is not None:
-                if no_return:
-                    data = None
-                return {'sc':sharecode, 'data':data}
+                return {'sc': sharecode, 'data': data}
         if not offline:
             url = 'https://www.gmaxequine.com/TPD/client/sectionals-raw.ashx?Sharecode={0}&k={1}'.format(sharecode, licence)
             # returns a list of dicts
             data = process_url_response(url = url, direc = self._sectionals_raw_path, fname = sharecode, version = 1)
         if no_return:
             data = None
-        return {'sc':sharecode, 'data':data}
+        return {'sc': sharecode, 'data': data}
     
     def get_tracker_performance(self, sharecode: str, **kwargs) -> dict:
         """
@@ -866,14 +880,14 @@ class GmaxFeed:
             if data is not None and any([row.get("RX") for row in data]):
                 if no_return:
                     data = None
-                return {'sc':sharecode, 'data':data}
+                return {'sc': sharecode, 'data': data}
         if not offline:
             url = 'https://www.gmaxequine.com/TPD/client/performance.ashx?Sharecode={0}&k={1}'.format(sharecode, self.licence)
             # returns a list of dicts
             data = process_url_response(url = url, direc = self._errors_path, fname = sharecode, version = 1)
         if no_return:
             data = None
-        return {'sc':sharecode, 'data':data}
+        return {'sc': sharecode, 'data': data}
     
     def get_obstacles(self, sharecode: str, **kwargs) -> dict:
         """
@@ -907,18 +921,19 @@ class GmaxFeed:
             return {'sc':sharecode, 'data':None}
         data = None
         if not new:
-            data = load_file(direc = self._jumps_path, fname = sharecode)
+            if no_return:
+                data = check_file_exists(direc = self._jumps_path, fname = sharecode)
+            else:
+                data = load_file(direc = self._jumps_path, fname = sharecode)
             if data is not None:
-                if no_return:
-                    data = None
-                return {'sc':sharecode, 'data':data}
+                return {'sc': sharecode, 'data': data}
         if not offline:
             url = 'https://www.gmaxequine.com/TPD/client/jumps.ashx?Sharecode={0}&k={1}'.format(sharecode, self.licence)
             # returns a list of dicts
             data = process_url_response(url = url, direc = self._jumps_path, fname = sharecode, version = 1)
         if no_return:
             data = None
-        return {'sc':sharecode, 'data':data}
+        return {'sc': sharecode, 'data': data}
     
     def get_route(self, course_code: str or int, **kwargs) -> dict:
         """
@@ -953,10 +968,11 @@ class GmaxFeed:
         course_code = str(course_code).zfill(2)
         fname = 'Racecourse-{0}.kml'.format(course_code)
         if not new:
-            data = load_file(direc = self._route_path, fname = fname, is_json = False)
+            if no_return:
+                data = check_file_exists(direc = self._route_path, fname = fname)
+            else:
+                data = load_file(direc = self._route_path, fname = fname, is_json = False)
             if data is not None:
-                if no_return:
-                    data = None
                 output["data"] = data
                 return output
         if not offline:
@@ -1009,7 +1025,13 @@ class GmaxFeed:
     
     def get_data(self,
                  sharecodes: dict or list,
-                 request: set = {'sectionals', 'sectionals-raw', 'sectionals-history', 'points', 'obstacles'},
+                 request: set = {
+                     'sectionals',
+                     'sectionals-raw',
+                     'sectionals-history',
+                     'points',
+                     'obstacles'
+                     },
                  filter: RaceMetadata = None,
                  **kwargs
                  ) -> dict or None:

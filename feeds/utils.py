@@ -123,6 +123,28 @@ def to_datetime(d: datetime or int or float or str = None, tz = None):
             d = d.astimezone(dateutil.tz.UTC).replace(tzinfo = None)
         return d
 
+def check_file_exists(direc: str, fname: str) -> True or None:
+    """
+    check if file exists, return True if exists.
+    
+    used in conjuction with no_return flag, to stop existing files being
+    loaded and returned and also to not waste time on file IO.
+
+    returns None if False to work with current logic.
+
+    Parameters
+    ----------
+    direc : str
+        directory to search for file
+    fname : str
+        file name.
+
+    Returns
+    -------
+    True or None
+    """
+    return os.path.exists(os.path.join(direc, fname)) or None
+
 def read_file(path: str, is_json: bool = True) -> dict or list:
     """
     read a json file into python dict/list
@@ -147,6 +169,52 @@ def read_file(path: str, is_json: bool = True) -> dict or list:
             else:
                 data = f.read()
     return data
+
+def load_file(direc: str, fname: str, is_json: bool = True) -> dict or None:
+    """
+    intermediary function for loading file 'fname' from directory 'direc'.
+    fname must be a json encoded file.
+
+    Parameters
+    ----------
+    direc : str
+        directory from which to load file.
+    fname : str
+        fname to load from file.
+    is_json : bool
+        whether the file is json encoded or not. Default is True.
+
+    Returns
+    -------
+    dict or None
+    """
+    path = os.path.join(direc, fname)
+    return read_file(path, is_json = is_json)
+
+def dump_file(data: dict or str or bytes,
+              direc: str, 
+              fname: str
+              ) -> None:
+    """
+    dump json encoded data or raw string into os.path.join(direc, fname).
+
+    Parameters
+    ----------
+    data : dict or str or bytes
+        json data or string to dump to file.
+    direc : str
+        directory to use.
+    fname : str
+        fname to use within given directory.
+    """
+    path = os.path.join(direc, fname)
+    with open(path, 'w') as f:
+        if type(data) in [list, dict]:
+            json.dump(data, f)
+        else:
+            if type(data) is bytes:
+                data = data.decode("ascii")
+            f.write(data)
 
 def reformat_sectionals_list(data: list) -> dict:
     """
@@ -206,52 +274,6 @@ def reformat_gps_list(data: list, by: str = 'T') -> dict:
     for key in heads:
         d[key] = {row[a]:row for row in data if row[by]==key}
     return d
-
-def load_file(direc: str, fname: str, is_json: bool = True) -> dict or None:
-    """
-    intermediary function for loading file 'fname' from directory 'direc'.
-    fname must be a json encoded file.
-
-    Parameters
-    ----------
-    direc : str
-        directory from which to load file.
-    fname : str
-        fname to load from file.
-    is_json : bool
-        whether the file is json encoded or not. Default is True.
-
-    Returns
-    -------
-    dict or None
-    """
-    path = os.path.join(direc, fname)
-    return read_file(path, is_json = is_json)
-
-def dump_file(data: dict or str or bytes,
-              direc: str, 
-              fname: str
-              ) -> None:
-    """
-    dump json encoded data or raw string into os.path.join(direc, fname).
-
-    Parameters
-    ----------
-    data : dict or str or bytes
-        json data or string to dump to file.
-    direc : str
-        directory to use.
-    fname : str
-        fname to use within given directory.
-    """
-    path = os.path.join(direc, fname)
-    with open(path, 'w') as f:
-        if type(data) in [list, dict]:
-            json.dump(data, f)
-        else:
-            if type(data) is bytes:
-                data = data.decode("ascii")
-            f.write(data)
 
 def process_url_response(url: str,
                          direc: str,
