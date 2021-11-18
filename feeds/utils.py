@@ -634,6 +634,30 @@ def compute_overall_race_metrics(sectionals: list,
             })
     return metrics
 
+def list_broken_progress_field(sharecodes: list, gmax_feed) -> list:
+    """
+    list sharecodes where the points have P field which does decrease through race
+
+    Parameters
+    ----------
+    sharecodes : list
+        list of sharecodes to check
+    gmax_feed : TYPE
+        GmaxFeed instance
+
+    Returns
+    -------
+    list
+        list of broekn sharecodes
+    """
+    broken = []
+    for sc in sharecodes:
+        points = gmax_feed.get_points(sc, offline = True).get('data')
+        if points:
+            if len(set([row["P"] for row in points])) < 20:
+                broken.append(sc)
+    return broken
+
 def _compute_derivatives(data: dict, race_length: float) -> dict:
     """
     compute some overview metrics for the given sectionals for some runner
