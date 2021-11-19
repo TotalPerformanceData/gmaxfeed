@@ -84,9 +84,9 @@ def reduce_racetype(racetype: str) -> str:
     str
         a more concise racetype, if too much detail given
     """
-    racetype = re.sub(" Lane [0-9]", "", racetype)
-    racetype = re.sub("\((.*?)\)", "", racetype)
-    racetype = re.sub("(Legacy|legacy|OLD|old)", "", racetype)
+    racetype = re.sub("( Lane [0-9])|\((.*?)\)|(Legacy|legacy|OLD|old)",
+                      "",
+                      racetype)
     return racetype.strip()
 
 def to_datetime(d: datetime or int or float or str = None, tz = None):
