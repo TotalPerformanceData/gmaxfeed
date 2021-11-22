@@ -50,8 +50,10 @@ def get_logger(name: str,
     -------
     instance of logging.RootLogger, or logging handler
     """
+    if not os.path.splitext(name)[1]:
+        name += ".log"
     ch = logging.handlers.RotatingFileHandler(
-        filename = os.path.join(LOGS_DIR, os.path.split(name)[1] + ".log"),
+        filename = os.path.join(LOGS_DIR, os.path.split(name)[1]),
         maxBytes = 10**7,
         backupCount = 10
         )
