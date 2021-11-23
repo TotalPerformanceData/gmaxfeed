@@ -84,7 +84,7 @@ def reduce_racetype(racetype: str) -> str:
     str
         a more concise racetype, if too much detail given
     """
-    racetype = re.sub("( Lane [0-9])|\((.*?)\)|(Legacy|legacy|OLD|old)",
+    racetype = re.sub("( Lane (\d+(?:\.\d+)?))|\((.*?)\)|(Legacy|legacy|OLD|old)",
                       "",
                       racetype)
     return racetype.strip()
