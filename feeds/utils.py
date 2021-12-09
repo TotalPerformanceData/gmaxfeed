@@ -32,6 +32,51 @@ HEADERS_ = {
         '1': ['Finish', '1f', '2f', '3f', '4f', '5f', '6f', '7f', '8f', '9f', '10f', '11f', '12f', '13f', '14f', '15f', '16f', '17f', '18f', '19f', '20f', '21f', '22f', '23f', '24f', '25f', '26f', '27f', '28f', '29f', '30f', '31f', '32f', '33f', '34f']
         }
 
+TURF_COURSES = [
+    "Ascot",
+    "Bangor",
+    "Bath",
+    "Brighton",
+    "Chepstow",
+    "Chester",
+    "Doncaster",
+    "Fakenham",
+    "Ffos Las",
+    "Fontwell",
+    "Hereford",
+    "Hexham",
+    "Kentucky Downs",
+    "Newton Abbot",
+    "Plumpton",
+    "Ripon",
+    "Sedgefield",
+    "Uttoxeter",
+    "Windsor",
+    "Worcester",
+    "Yarmouth"
+    ]
+AW_COURSES = [
+    "Wolverhampton",
+    ]
+DIRT_COURSES = []
+SPECIFIC_COURSES = {
+    "Southwell 1M7f182y NH Flat": "Turf",
+    "Southwell 1M7f153y NH Flat": "Turf",
+    "Canterbury 250y": "Dirt",
+    "Canterbury 300y": "Dirt",
+    "Canterbury 330y": "Dirt",
+    "Canterbury 350y": "Dirt",
+    "Canterbury 400y": "Dirt",
+    "Canterbury 440y": "Dirt",
+    "Canterbury 870y": "Dirt",
+    "Newcastle 1M6f66y NH Flat": "Turf",
+    "Newcastle 2M46y NH Flat": "Turf",
+    "Newcastle 2M4f NH Flat": "AW",
+    "Newcastle 2M56y NH Flat": "AW",
+    "Newcastle 2M98y NH Flat": "Turf"
+    }
+
+
 def listdir2(fol: str) -> list:
     """
     listdir, but ignore all hidden files, .DS_Store, ., ..
@@ -74,6 +119,8 @@ def reduce_racetype(racetype: str) -> str:
     useful for grouping races on seldom run distances to get more observations
     for sectional averages.
     
+    # TODO, regex cuts out (AW) from 'Newcastle 2M4f NH Flat (AW)', would rather it didn't
+    
     Parameters
     ----------
     racetype : str
@@ -88,6 +135,65 @@ def reduce_racetype(racetype: str) -> str:
                       "",
                       racetype)
     return racetype.strip()
+
+def get_race_details(racetype: str, racecourse: str = None) -> dict:
+    """
+    get estimated race details from the Gmax RaceType string, including surface, 
+    obstacle and ROUND or STRAIGHT course.
+
+    Parameters
+    ----------
+    racetype : str
+        Gmax RaceType string.
+    racecourse : str
+        Gmax Racecourse string.
+
+    Returns
+    -------
+    dict
+    """
+    lower_racetype = racetype.lower()
+    surface = None
+    if "Turf" in racetype or any([x in lower_racetype for x in ["hurdle", "chase"]]):
+        surface = "Turf"
+    elif any([x in lower_racetype for x in ["allweather", "all weather", "all-weather", "polytrack", "tapeta", "fibresand"]]) or \
+         any([x in racetype for x in ["AW", "PT", "FS"]]):
+        surface = "AW"
+    elif "Dirt" in racetype:
+        surface = "Dirt"
+    else:
+        # use list of courses which are definitely only one type
+        racecourse = racecourse or racetype
+        if any([x in racecourse for x in TURF_COURSES]):
+            surface = "Turf"
+        elif any([x in racecourse for x in AW_COURSES]):
+            surface = "AW"
+        elif any([x in racecourse for x in DIRT_COURSES]):
+            surface = "Dirt"
+        else:
+            surface = SPECIFIC_COURSES.get(racetype)
+    
+    if "chase" in lower_racetype:
+        obstacle = "Fence"
+    elif "hurdle" in lower_racetype:
+        obstacle = "Hurdle"
+    elif "nh flat" in lower_racetype:
+        obstacle = "NH Flat"
+    else:
+        obstacle = "Flat"
+    
+    if any([x in racetype for x in ["Straight", "Ascot 1M Flat"]]):
+        detail = "STRAIGHT"
+    elif any([x in racetype for x in ["Round", "Doncaster 7f213y", "Ascot 7f213y Flat"]]):
+        detail = "ROUND"
+    else:
+        detail = None
+    
+    return {
+        "surface": surface,
+        "obstacle": obstacle,
+        "detail": detail
+        }
 
 def to_datetime(d: datetime or int or float or str = None, tz = None):
     """
