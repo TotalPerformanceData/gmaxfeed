@@ -535,16 +535,19 @@ def convert_sectionals_to_1f(sectionals: list) -> list:
             sects = [row for row in runner_sects if
                      gate_number <= _gate_num(row["G"]) < upper_gate_number]
             if sects:
-                new_sects.append({
+                b = min(sects, key = lambda row: row["L"]).get("B")
+                d = {
                     "I": sects[0]["I"],
                     "G": min([row["G"] for row in sects], key = _gate_num),
                     "L": min([row["L"] for row in sects]),
                     "S": sum([row["S"] for row in sects]),
                     "R": max([row["R"] for row in sects]),
-                    "B": min(sects, key = lambda row: row["L"])["B"],
                     "D": sum([row["D"] for row in sects]),
                     "N": sum([row.get("N") or 0 for row in sects])
-                    })
+                }
+                if b:
+                    d["B"] = b
+                new_sects.append(d)
     return new_sects
 
 def add_proportions(sectionals: list, inplace: bool = True) -> list:
@@ -754,7 +757,7 @@ def list_broken_progress_field(sharecodes: list, gmax_feed) -> list:
     Returns
     -------
     list
-        list of broekn sharecodes
+        list of broken sharecodes
     """
     broken = []
     for sc in sharecodes:
@@ -762,6 +765,38 @@ def list_broken_progress_field(sharecodes: list, gmax_feed) -> list:
         if points:
             if len(set([row["P"] for row in points])) < 20:
                 broken.append(sc)
+    return broken
+
+def list_broken_sectional_field(sharecodes: list, gmax_feed) -> list:
+    """
+    list sharecodes where the points have P field which does decrease through race
+
+    Parameters
+    ----------
+    sharecodes : list
+        list of sharecodes to check
+    gmax_feed : TYPE
+        GmaxFeed instance
+
+    Returns
+    -------
+    list
+        list of broken sharecodes
+    """
+    broken = []
+    for sc in sharecodes:
+        sects = gmax_feed.get_sectionals(sc, offline = True).get('data')
+        if sects:
+            if sum(["B" in row for row in sects]) != len(sects):
+                broken.append(sc)
+            elif sum(["L" in row for row in sects]) != len(sects):
+                broken.append(sc)
+            elif sum(["D" in row for row in sects]) != len(sects):
+                broken.append(sc)
+            else:
+                sumn = sum(["N" in row for row in sects])
+                if sumn and sumn != len(sects):
+                    broken.append(sc)
     return broken
 
 def _compute_derivatives(data: dict, race_length: float) -> dict:
