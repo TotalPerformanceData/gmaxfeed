@@ -76,6 +76,16 @@ SPECIFIC_COURSES = {
     "Newcastle 2M98y NH Flat": "Turf"
     }
 
+GATE_MAP = {
+    'Finish': 'Finish',
+    '0.5f': 'Finish',
+    }
+for i in range(2, 72, 2):
+    GATE_MAP["{0}f".format(int(i / 2))] = "{0}f".format(int(i / 2))
+    GATE_MAP["{0}F".format(int(i / 2))] = "{0}F".format(int(i / 2))
+    GATE_MAP["{0}f".format(round((i + 1) / 2, 1))] = "{0}f".format(int(i / 2))
+    GATE_MAP["{0}F".format(round((i + 1) / 2, 1))] = "{0}F".format(int(i / 2))
+
 
 def listdir2(fol: str) -> list:
     """
@@ -131,9 +141,11 @@ def reduce_racetype(racetype: str) -> str:
     str
         a more concise racetype, if too much detail given
     """
-    racetype = re.sub("( Lane (\d+(?:\.\d+)?))|\((.*?)\)|(Legacy|legacy|OLD|old)",
-                      "",
-                      racetype)
+    racetype = re.sub(
+        "( Lane (\d+(?:\.\d+)?))|\((.*?)\)|(Legacy|legacy|OLD|old)",
+        "",
+        racetype
+        )
     return racetype.strip()
 
 def get_race_details(racetype: str, racecourse: str = None) -> dict:
@@ -549,6 +561,82 @@ def convert_sectionals_to_1f(sectionals: list) -> list:
                     d["B"] = b
                 new_sects.append(d)
     return new_sects
+
+def group_sectionals_to_1f(sectionals: list) -> list:
+    """
+    convert a list of sectional records into the 1f interval UK format.
+    used for bring the USA format into more consistent format until a fix can
+    be applied at source to allow the user to specify the interval.
+
+    note, only 0.5f interval is supported. gates which don't conform to the 
+    expected interval (0.5f interval where gates are multiple of 0.5) will
+    return None.
+    sectionals given which are already 1f intervals will return itself.
+    
+    duplicate of above with hardcoded map of gates to group.
+    
+    runners with duplicate sections are included, incomplete runs are removed.
+    
+    >>> # test a race with half intervals
+    >>> gmax_feed = GmaxFeed()
+    >>> sectionals = gmax_feed.get_sectionals("76202201051340").get("data")
+    >>> if sectionals:
+    >>>     new_sectionals = group_sectionals_to_1f(sectionals)
+    >>> bool(new_sectionals)
+    >>> # test a race with weird sectionals isn't returned
+    >>> sectionals = gmax_feed.get_sectionals("76202111021436").get("data")
+    >>> new_sectionals = group_sectionals_to_1f(sectionals)
+    >>> bool(new_sectionals)
+    >>> # test a race with 1f intervals
+    >>> sectionals = gmax_feed.get_sectionals("47202201091240").get("data")
+    >>> new_sectionals = group_sectionals_to_1f(sectionals)
+    >>> new_sectionals == sectionals
+    
+    Parameters
+    ----------
+    sectionals : list
+        list of gmax sectionals with intervals not equal to 1f.
+
+    Returns
+    -------
+    list
+        new sectionals with interval equal to 1f, and the remainder placed
+        at the start of the race.
+    """
+    given_gates = [row["G"] for row in sectionals]
+    if any([g not in GATE_MAP for g in given_gates]):
+        return None
+    target_gates = set([row for row in GATE_MAP.values()])
+    if all([g in target_gates for g in given_gates]):
+        return sectionals
+    new_sectionals = []
+    # get dict of all runners that finished the race.
+    runners = {row["I"]:{} for row in sectionals if row["G"] == "Finish"}
+    for row in sectionals:
+        if row["I"] not in runners:
+            logger.warning("{0} not in runners dict, means it didn't finish the race".format(row["I"]))
+            continue
+        target_gate = GATE_MAP[row["G"]]
+        if target_gate not in runners[row["I"]]:
+            runners[row["I"]][target_gate] = []
+        runners[row["I"]][target_gate].append(row)
+    for runner, groups in runners.items():
+        for target_gate, sects in groups.items():
+            if sects:
+                b = min(sects, key = lambda row: row["L"]).get("B")
+                d = {
+                    "I": sects[0]["I"],
+                    "G": target_gate,
+                    "L": round(_gate_num(target_gate) * 201.168, 1),
+                    "S": round(sum([row["S"] for row in sects]), 2),
+                    "R": max([row["R"] for row in sects]),
+                    "D": round(sum([row["D"] for row in sects]), 1),
+                    "N": round(sum([row.get("N") or 0 for row in sects]), 1)
+                }
+                if b:
+                    d["B"] = b
+                new_sectionals.append(d)
+    return new_sectionals
 
 def add_proportions(sectionals: list, inplace: bool = True) -> list:
     """
