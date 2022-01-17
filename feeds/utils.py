@@ -633,7 +633,7 @@ def group_sectionals_to_1f(sectionals: list) -> list:
                     "D": round(sum([row["D"] for row in sects]), 1),
                     "N": round(sum([row.get("N") or 0 for row in sects]), 1)
                 }
-                if b:
+                if b is not None:
                     d["B"] = b
                 new_sectionals.append(d)
     return new_sectionals
