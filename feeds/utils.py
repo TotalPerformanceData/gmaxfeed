@@ -557,7 +557,7 @@ def convert_sectionals_to_1f(sectionals: list) -> list:
                     "D": sum([row["D"] for row in sects]),
                     "N": sum([row.get("N") or 0 for row in sects])
                 }
-                if b:
+                if b is not None:
                     d["B"] = b
                 new_sects.append(d)
     return new_sects
