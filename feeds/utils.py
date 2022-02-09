@@ -511,6 +511,37 @@ def apply_thread_pool(func,
         results = []
     return results
 
+def get_finish_order(sectionals: list) -> dict:
+    """
+    use the sectionals feed to get the finish time/order for each runner.
+    
+    handles dead heats in normal UK format, eg, [1, 1, 3, 4...]
+
+    Parameters
+    ----------
+    sectionals : list
+        list of gmax sectional records for some race.
+
+    Returns
+    -------
+    dict
+    """
+    runners = {}
+    sects = [row for row in sectionals if row["G"] == "Finish"]
+    t = 0.
+    pos = 1
+    counter = 0
+    for row in sorted(sects, key = lambda x: x["R"]):
+        counter += 1
+        if t < row["R"]:
+            pos = counter
+            t = row["R"]
+        runners[row["I"]] = {
+            "position": pos,
+            "finish_time": row["R"]
+            }
+    return runners
+
 def convert_sectionals_to_1f(sectionals: list) -> list:
     """
     convert a list of sectional records into the 1f interval UK format.
