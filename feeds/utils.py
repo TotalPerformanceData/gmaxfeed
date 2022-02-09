@@ -527,6 +527,8 @@ def get_finish_order(sectionals: list) -> dict:
     dict
     """
     runners = {}
+    if not sectionals:
+        return runners
     sects = [row for row in sectionals if row["G"] == "Finish"]
     t = 0.
     pos = 1
