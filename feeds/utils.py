@@ -29,7 +29,12 @@ from . import get_logger
 logger = get_logger(name = __name__)
 
 HEADERS_ = {
-        '1': ['Finish', '1f', '2f', '3f', '4f', '5f', '6f', '7f', '8f', '9f', '10f', '11f', '12f', '13f', '14f', '15f', '16f', '17f', '18f', '19f', '20f', '21f', '22f', '23f', '24f', '25f', '26f', '27f', '28f', '29f', '30f', '31f', '32f', '33f', '34f']
+        '1': [
+            'Finish', '1f', '2f', '3f', '4f', '5f', '6f', '7f', '8f', '9f', 
+            '10f', '11f', '12f', '13f', '14f', '15f', '16f', '17f', '18f',
+            '19f', '20f', '21f', '22f', '23f', '24f', '25f', '26f', '27f',
+            '28f', '29f', '30f', '31f', '32f', '33f', '34f'
+            ]
         }
 
 TURF_COURSES = [
@@ -117,7 +122,44 @@ def _gate_num(x: str) -> float:
     float
         furlongs from finish.
     """
-    return float(x.replace('f','').replace('Finish','0').replace('F',''))
+    if "m" == x[-1]:
+        # handle courses where interval is 200m
+        return float(x.replace('m','').replace('Finish','0')) / 200.
+    else:
+        # handle everything else where interval is furlong.
+        return float(x.replace('f','').replace('Finish','0').replace('F',''))
+
+def alter_gate_label(gate_label: str,
+                     func = None
+                     ) -> str:
+    """
+    some courses have get labels in intervals of 200m rather than 1f, 2f...
+    which breaks a lot of things, easiest solution is to convert the 200m
+    label to 1f (and so on) and then ensure that anything that requires the
+    exact distance uses the "D" field.
+
+    >>> assert alter_gate_label("1400m") == "7f"
+    >>> assert alter_gate_label("300m") == "1.5f"
+    >>> assert alter_gate_label("Finish") == "Finish"
+
+    Parameters
+    ----------
+    gate_label : str
+        gmax sectional gate "G" label to convert to terms of "f", such as "1400m"
+    func : function, optional
+        alternative function to apply to make the conversion.
+        The default is None.
+
+    Returns
+    -------
+    str
+    """
+    if func:
+        gate_label = func(gate_label)
+    if gate_label[-1] == "m" and len(gate_label) < 10:
+        gate_label = "{0}f".format(float(gate_label.replace('m','')) / 200.)
+        gate_label = gate_label.replace(".0", "")
+    return gate_label
 
 def reduce_racetype(racetype: str) -> str:
     """
@@ -543,6 +585,26 @@ def get_finish_order(sectionals: list) -> dict:
             "finish_time": row["R"]
             }
     return runners
+
+def alter_sectionals_gate_label(sectionals: list) -> list:
+    """
+    alter metric system setional gate labels to imperial,
+    using alter_gate_label().
+    
+    alteration made in place.
+
+    Parameters
+    ----------
+    sectionals : list
+        list of gmax sectionals.
+
+    Returns
+    -------
+    list
+    """
+    for row in sectionals:
+        row["G"] = alter_gate_label(row["G"])
+    return sectionals
 
 def convert_sectionals_to_1f(sectionals: list) -> list:
     """
