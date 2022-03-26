@@ -84,11 +84,12 @@ Requires an active licence key obtained by purchase from Total Performance Data,
 
 Feed Specifications below:
 - GPS Points: https://www.gmaxequine.com/downloads/GX-RP-00038%202018-10-12%20Gmax%20Race%20Point%20Data%20Feed%20Specification.pdf
-- Sectionals: https://www.gmaxequine.com/downloads/GX-RP-00019%202019-02-15%20Gmax%20Race%20Post-Race%20Protocol%20Specification.pdf
+- Sectionals: https://www.gmaxequine.com/downloads/GX-UG-00019%202021-04-15%20Gmax%20Race%20Post-Race%20Protocol%20Specification.pdf
 - Daily Race List: https://www.gmaxequine.com/downloads/GX-RP-00054%202020-06-03%20Gmax%20Race%20List%20Feed%20Specification.pdf
 - Sectionals History: https://www.gmaxequine.com/downloads/GX-RP-00047%202018-12-14%20Gmax%20Race%20Sectionals%20History%20Feed%20Specification.pdf
 - Racecourse Surveys: https://www.gmaxequine.com/downloads/GX-RP-00039%202018-02-12%20Gmax%20Race%20Route%20Data%20Feed%20Specification.pdf
 - Jumps Locations (Hurdles coming Soon): https://www.gmaxequine.com/downloads/GX-RP-00055%202019-06-05%20Gmax%20Race%20Jumps%20Feed%20Specification.pdf
+- Fixtures List (Fixtures scheduled in next 7 days): https://www.gmaxequine.com/downloads/GX-UG-00060%202021-06-25%20Gmax%20Race%20Fixtures%20Feed%20Specification.pdf
 
 Live data streams also available are:
 - Live GPS Points: https://www.gmaxequine.com/downloads/GX-RP-00007%202018-08-08%20Gmax%20Race%20Live%20Data%20Feed%20Specification.pdf
