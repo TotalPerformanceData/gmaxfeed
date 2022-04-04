@@ -18,7 +18,7 @@ import concurrent.futures
 import numpy as np
 import pandas as pd
 from copy import deepcopy
-from datetime import datetime, date
+from datetime import datetime, timedelta, date
 import bs4
 from bs4 import BeautifulSoup
 
@@ -552,6 +552,39 @@ def apply_thread_pool(func,
     else:
         results = []
     return results
+
+def get_start_finish_timestamps(packets: list) -> dict:
+    """
+    get start and finish timestamps from a list of packets from the live
+    recorded progress feed (K = 5).
+
+    Parameters
+    ----------
+    packets : list
+        list of gmax progress feed packets.
+
+    Returns
+    -------
+    dict {
+        "start_time": datetime or None,
+        "finish_time": datetime or None
+        }
+    """
+    start_time = None
+    finish_time = None
+    for row in packets:
+        if row["R"] > 0 and start_time is None:
+            # new start timestamp detected
+            start_time = datetime.strptime(row["T"], "%Y-%m-%dT%H:%M:%S.%fZ") - timedelta(seconds = row["R"])
+        elif start_time is not None and row["R"] == 0:
+            # likely a false start, reset
+            start_time = None
+        if start_time and row["P"] == 0:
+            finish_time = start_time + timedelta(seconds = row["R"])
+    return {
+        "start_time": start_time,
+        "finish_time": finish_time
+        }
 
 def get_finish_order(sectionals: list) -> dict:
     """
