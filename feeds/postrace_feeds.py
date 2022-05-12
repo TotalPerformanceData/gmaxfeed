@@ -4,27 +4,39 @@
 Created on Fri Jun  7 11:48:33 2019
 
 Aesthetic class for requesting data from the gmax API.
+
 RaceMetadata can be used for filtering the sharecodes
-Keep up to date using update function, either by running gmaxfeed/main_update.py or scheduling update() in other applications.
+
+Keep up to date using update function, either by running gmaxfeed/main_update.py
+or scheduling update() in other applications.
+
 Don't run this as main as imports don't work then.
 
-Gmax Licence can be hard coded in GmaxFeed in line 90, or more preferably set as an environment variable either by placing 
-inserting lines of definitions after the imports as indicated on lines 34 to 43 (commented out) or more preferably still by 
-setting persistent environment variables;
+Gmax Licence can be hard coded in GmaxFeed in line 403, or more preferably set
+as an environment variable either by inserting lines of definitions after the
+imports as indicated on lines 66 to 76 (commented out) or more preferably still
+by setting persistent environment variables.
 
-setting env variable:
+setting env variables:
 OSX:
-    in the terminal, use export GMAXLICENCE=my_licence
-    permanently add to source by adding a line to bash_profile:
+    in the terminal, use the command
+    $export GMAXLICENCE=my_licence
+    permanently add to source by adding a line to ~/.bash_profile or ~/.profile:
     nano ~/.bash_profile
     then scroll to bottom and add line,
     export GMAXLICENCE=my_licence
-    type "source ~/.bash_profile" to enable. should be saved for future terminal sessions.
+    type "source ~/.bash_profile" to enable. When a new terminal session is loaded
+    the deafult profile is loaded, this varies depending on which files are
+    available and which shell script language is being used.
 Linux:
-    as above, but the "~/.bash_profile" is instead "/.bashrc"
+    as above, but ~/.bash_profile is more liekly to be ~/.profile, or you could
+    put them at the bottom of ~/.bashrc.
 Windows:
-    the command is "set" instead of "export", and to set persistently for future cmd sessions I think you just need to enter,
+    the command is "set" instead of "export", and to set persistently for future
+    cmd sessions I think you just need to use
     setx GMAXLICENCE my_licence
+    there's also a GUI which can be found by searching for "env" in the windows
+    search tool.
 
 @author: george swindells
 @email: george.swindells@totalperformancedata.com
@@ -51,6 +63,7 @@ from datetime import datetime, timedelta, timezone
 from datetime import date as date_
 
 """
+# environment variables used
 os.environ['FIXTURES_PATH'] = '/path/to/fixtures'
 os.environ['RACELIST_PATH'] = '/path/to/racelist'
 os.environ['SEC_PATH'] = '/path/to/sectionals'
@@ -69,7 +82,7 @@ logger = get_logger(name = __name__)
 
 class RaceMetadata:
     """
-    house metadata about the races, and filter for given countries, courses, 
+    group metadata about the races, and filter for given countries, courses, 
     published status etc if applicable.
     
     can define without data, and call set_filter() to apply to something later,
@@ -256,8 +269,11 @@ class RaceMetadata:
         courses = ['Ascot', 'Newcastle', 'Lingfield Park']
         course_codes = ['01', '35', '30']
         countries = ['US', 'GB']
-        published = True # compare the race_data['Published'] field against the given published paramter and return if matches
-        start_date = datetime(2020, 1, 1, tzinfo = timezone.utc) # must be timezone aware as compared to race_data['PostTime'] parsed field
+        published = True # compare the race_data['Published'] field against the
+            given published paramter and return if matches
+            
+        # must be timezone aware as compared to race_data['PostTime'] parsed field
+        start_date = datetime(2020, 1, 1, tzinfo = timezone.utc)
         end_date = datetime(2020, 1, 1, tzinfo = timezone.utc)
         
         Parameters
@@ -272,9 +288,15 @@ class RaceMetadata:
             include only published races, only unpublished races, or all.
             The default is None.
         start_date : datetime or str, optional
-            lower bound datetime. The default is None.
+            lower bound datetime.
+            must be timezone aware as is compared to race_data['PostTime'] parsed
+            field.
+            The default is None.
         end_date : datetime or str, optional
-            upper bound datetime. The default is None.
+            upper bound datetime. 
+            must be timezone aware as is compared to race_data['PostTime'] parsed
+            field.
+            The default is None.
         race_types : list or set, optional
             iterable of race_types to include. The default is None.
         data : list or dict, optional
@@ -287,8 +309,14 @@ class RaceMetadata:
         course_codes = course_codes or self._filter.get('course_codes')
         race_types = race_types or self._filter.get('race_types')
         published = published or self._filter.get('published')
-        start_date = to_datetime(start_date or self._filter.get('start_date'), tz = dateutil.tz.UTC)
-        end_date = to_datetime(end_date or self._filter.get('end_date'), tz = dateutil.tz.UTC)
+        start_date = to_datetime(
+            start_date or self._filter.get('start_date'),
+            tz = dateutil.tz.UTC
+            )
+        end_date = to_datetime(
+            end_date or self._filter.get('end_date'),
+            tz = dateutil.tz.UTC
+            )
         if all([x is None for x in [countries, courses, course_codes, published, start_date, end_date, race_types]]):
             self._list = self._data
         else:
@@ -383,10 +411,9 @@ class GmaxFeed:
         self.set_jumps_path(path = jumps_path)
         self.set_tracker_performance_path(path = performance_path)
         if not self:
-            raise Exception("""No licence key set by GmaxFeed,
-                             pass licence = "my_licence" to constructor, or set
-                             GMAXLICENCE = "my_licence" as environment variable
-                             """)
+            raise Exception(
+                'No licence key set by GmaxFeed, pass licence = "my_licence" to constructor, or set GMAXLICENCE = "my_licence" as environment variable'
+                )
     
     def __bool__(self) -> bool:
         return self.licence is not None
@@ -482,9 +509,15 @@ class GmaxFeed:
             limit_date = date + timedelta(days = 6)
             if (not new and mtime > limit_date) or offline:
                 if no_return:
-                    data = check_file_exists(direc = self._fixtures_path, fname = date_str)
+                    data = check_file_exists(
+                        direc = self._fixtures_path,
+                        fname = date_str
+                        )
                 else:
-                    data = load_file(direc = self._fixtures_path, fname = date_str)
+                    data = load_file(
+                        direc = self._fixtures_path,
+                        fname = date_str
+                        )
                 if data is not None:
                     return data
         # if data is None file doesn't exist, try downloading a new file if offline is False
@@ -547,7 +580,10 @@ class GmaxFeed:
             mtime = datetime.fromtimestamp(os.path.getmtime(path))
             limit_date = date + timedelta(days = 6)
             if (not new and mtime > limit_date) or offline:
-                data = load_file(direc = self._racelist_path, fname = date_str)
+                data = load_file(
+                    direc = self._racelist_path,
+                    fname = date_str
+                    )
                 if data is not None:
                     return data.get(sharecode) or False
         # if data is None file doesn't exist, try downloading a new file if offline is False
@@ -674,7 +710,12 @@ class GmaxFeed:
         end_date += timedelta(days = 1) # to include last date in range
         range_ = (end_date - start_date).days
         dates = [start_date + timedelta(days = dt) for dt in range(0, range_, 1)]
-        result = apply_thread_pool(self.get_racelist, dates, new = new, offline = offline)
+        result = apply_thread_pool(
+            self.get_racelist,
+            dates,
+            new = new,
+            offline = offline
+            )
         data = {}
         for row in result:
             if row:
@@ -688,7 +729,7 @@ class GmaxFeed:
         Parameters
         ----------
         sharecode : str
-            DESCRIPTION.
+            Gmax/TPD sharecode/race_id.
         
         **params
         new : bool, optional
@@ -711,7 +752,10 @@ class GmaxFeed:
         data = None
         if not new:
             if no_return:
-                data = check_file_exists(direc = self._gps_path, fname = sharecode)
+                data = check_file_exists(
+                    direc = self._gps_path,
+                    fname = sharecode
+                    )
             else:
                 data = load_file(direc = self._gps_path, fname = sharecode)
             if data is not None:
@@ -759,7 +803,10 @@ class GmaxFeed:
         data = None
         if not new:
             if no_return:
-                data = check_file_exists(direc = self._sectionals_path, fname = sharecode)
+                data = check_file_exists(
+                    direc = self._sectionals_path,
+                    fname = sharecode
+                    )
             else:
                 data = load_file(direc = self._sectionals_path, fname = sharecode)
             if data is not None:
@@ -811,9 +858,15 @@ class GmaxFeed:
         data = None
         if not new:
             if no_return:
-                data = check_file_exists(direc = self._sectionals_history_path, fname = sharecode)
+                data = check_file_exists(
+                    direc = self._sectionals_history_path,
+                    fname = sharecode
+                    )
             else:
-                data = load_file(direc = self._sectionals_history_path, fname = sharecode)
+                data = load_file(
+                    direc = self._sectionals_history_path,
+                    fname = sharecode
+                    )
             if data is not None:
                 if sharecode[:2] == "65":
                     data = alter_sectionals_gate_label(sectionals = data)
@@ -867,9 +920,15 @@ class GmaxFeed:
             return {'sc': sharecode, 'data': None}
         if not new:
             if no_return:
-                data = check_file_exists(direc = self._sectionals_raw_path, fname = sharecode)
+                data = check_file_exists(
+                    direc = self._sectionals_raw_path,
+                    fname = sharecode
+                    )
             else:
-                data = load_file(direc = self._sectionals_raw_path, fname = sharecode)
+                data = load_file(
+                    direc = self._sectionals_raw_path,
+                    fname = sharecode
+                    )
             if data is not None:
                 if sharecode[:2] == "65":
                     data = alter_sectionals_gate_label(sectionals = data)
@@ -965,12 +1024,17 @@ class GmaxFeed:
         offline = kwargs.get("offline")
         no_return = kwargs.get("no_return")
         metadata = self.get_race(sharecode = sharecode, offline = offline)
-        if not metadata or "RaceType" not in metadata or not any([x in metadata.get("RaceType", "").lower() for x in ['hurdle', 'chase', 'nh flat']]):
-            return {'sc':sharecode, 'data':None}
+        if not metadata or \
+            "RaceType" not in metadata or \
+            not any([x in metadata.get("RaceType", "").lower() for x in ['hurdle', 'chase', 'nh flat']]):
+            return {'sc': sharecode, 'data': None}
         data = None
         if not new:
             if no_return:
-                data = check_file_exists(direc = self._jumps_path, fname = sharecode)
+                data = check_file_exists(
+                    direc = self._jumps_path,
+                    fname = sharecode
+                    )
             else:
                 data = load_file(direc = self._jumps_path, fname = sharecode)
             if data is not None:
@@ -992,7 +1056,7 @@ class GmaxFeed:
         """
         save a KML file in route directory.
         
-        returns a parsed version using Utils.route_xml_to_json function.
+        returns a parsed version using utils.route_xml_to_json function.
 
         Parameters
         ----------
@@ -1022,9 +1086,16 @@ class GmaxFeed:
         fname = 'Racecourse-{0}.kml'.format(course_code)
         if not new:
             if no_return:
-                data = check_file_exists(direc = self._route_path, fname = fname)
+                data = check_file_exists(
+                    direc = self._route_path,
+                    fname = fname
+                    )
             else:
-                data = load_file(direc = self._route_path, fname = fname, is_json = False)
+                data = load_file(
+                    direc = self._route_path,
+                    fname = fname,
+                    is_json = False
+                    )
             if data is not None:
                 output["data"] = data
                 return output
@@ -1074,12 +1145,21 @@ class GmaxFeed:
             map of coursecode to list of track coordinates.
         """
         if not course_codes:
-            sharecodes = self.get_racelist_range(start_date = datetime.today() - timedelta(days = 365), 
-                                                 end_date = datetime.today(),
-                                                 offline = True)
+            sharecodes = self.get_racelist_range(
+                start_date = datetime.today() - timedelta(days = 365), 
+                end_date = datetime.today(),
+                offline = True
+                )
             course_codes = list(set([sc[:2] for sc in sharecodes]))
-        res = apply_thread_pool(func = self.get_route, iterable = course_codes, **kwargs)
-        return {row["course_code"]: processing_function(row["data"]) for row in res if row["data"]}
+        res = apply_thread_pool(
+            func = self.get_route,
+            iterable = course_codes,
+            **kwargs
+            )
+        return {
+            row["course_code"]: processing_function(row["data"])
+            for row in res if row["data"]
+            }
     
     def get_data(self,
                  sharecodes: dict or list,
@@ -1106,11 +1186,13 @@ class GmaxFeed:
             iterable of sharecodes for which to fetch requested files.
         request : set, optional
             iterable of wanted files.
-            The default is {'sectionals',
-                            'sectionals-raw',
-                            'sectionals-history',
-                            'points',
-                            'obstacles'}.
+            The default is {
+                'sectionals',
+                'sectionals-raw',
+                'sectionals-history',
+                'points',
+                'obstacles'
+                }.
         filter : RaceMetadata, optional
             RaceMetadata instance filter. The default is None.
         
@@ -1149,8 +1231,14 @@ class GmaxFeed:
             }
         for label, func in labels2func.items():
             if label in request:
-                result = apply_thread_pool(func = func, iterable = sharecodes, **kwargs)
-                output[label] = {row['sc']: row['data'] for row in result if row['data']}
+                result = apply_thread_pool(
+                    func = func,
+                    iterable = sharecodes,
+                    **kwargs
+                    )
+                output[label] = {
+                    row['sc']: row['data'] for row in result if row['data']
+                    }
         return output
     
     def update(self,
@@ -1211,9 +1299,18 @@ class GmaxFeed:
             filter = RaceMetadata()
             filter.set_filter(published = True)
         
-        sharecodes = self.get_racelist_range(start_date = start_date, end_date = end_date, **kwargs)
+        sharecodes = self.get_racelist_range(
+            start_date = start_date,
+            end_date = end_date,
+            **kwargs
+            )
         kwargs["no_return"] = True
-        _ = self.get_data(sharecodes = sharecodes, request = request, filter = filter, **kwargs)
+        _ = self.get_data(
+            sharecodes = sharecodes,
+            request = request,
+            filter = filter,
+            **kwargs
+            )
     
     def load_all_sectionals(self,
                             start_date: datetime = None,
@@ -1230,17 +1327,18 @@ class GmaxFeed:
         Parameters
         ----------
         start_date : datetime, optional
-            DESCRIPTION. The default is None.
+            lower date boundary. The default is None.
         end_date : datetime, optional
-            DESCRIPTION. The default is None.
+            upper date boundary. The default is None.
         filter : RaceMetadata, optional
-            DESCRIPTION. The default is None.
+            filter instance to use. The default is None.
         to_csv : bool, optional
             DESCRIPTION. The default is True.
         compression : str, optional
-            DESCRIPTION. The default is None.
+            compression type to use. The default is None.
         fname : str, optional
-            DESCRIPTION. The default is None.
+            filename to use if to_csv is True.
+            The default is None.
         
         **params
         new : bool, optional
@@ -1257,18 +1355,30 @@ class GmaxFeed:
         -------
         dict
         """
-        sharecodes = self.get_racelist_range(start_date = start_date, end_date = end_date, **kwargs)
+        sharecodes = self.get_racelist_range(
+            start_date = start_date,
+            end_date = end_date,
+            **kwargs
+            )
         if filter is None:
             filter = RaceMetadata()
             filter.set_filter(published = True)
-        filter.apply_filter(data = sharecodes) # in place
-        sharecodes = {sc:filter.get(sc) for sc in filter} # return keys from filter._list, post filtered
-        sects = self.get_data(sharecodes = sharecodes, request = {'sectionals'}).get('sectionals')
+        filter.apply_filter(data = sharecodes) # apply filter in place
+        # return keys from filter._list, post filtered
+        sharecodes = {sc: filter.get(sc) for sc in filter}
+        sects = self.get_data(
+            sharecodes = sharecodes,
+            request = {'sectionals'}
+            ).get('sectionals')
         if to_csv:
             sectionals = []
             for s in sects.values():
                 sectionals.extend(s)
-            export_sectionals_to_csv(sectionals = sectionals, fname = fname, compression = compression)
+            export_sectionals_to_csv(
+                sectionals = sectionals,
+                fname = fname,
+                compression = compression
+                )
         else:
             for sc in sects:
                 sharecodes[sc]['sectionals'] = reformat_sectionals_list(sects[sc])
@@ -1276,10 +1386,10 @@ class GmaxFeed:
             return data
 
 
-# TODO to be completed
+# TODO to be completed when the API is ready
 class TPDFeed(GmaxFeed):
     """
-    adds derivative feeds from https://www.tpd-viewer.com, par lines, expected finish times etc
+    adds derivative feeds from tpd.zone, par lines, expected finish times etc
     """
     def __init__(self,
                  licence:str = None, 
@@ -1294,19 +1404,30 @@ class TPDFeed(GmaxFeed):
                  tpd_passwd:str = None,
                  par_path:str = None,
                  expected_times_path:str = None) -> None:
-        super().__init__(licence = licence, racelist_path = racelist_path, sectionals_path = sectionals_path, gps_path = gps_path, route_path = route_path, sectionals_history_path = sectionals_history_path, sectionals_raw_path = sectionals_raw_path, jumps_path = jumps_path)
+        super().__init__(
+            licence = licence,
+            racelist_path = racelist_path,
+            sectionals_path = sectionals_path,
+            gps_path = gps_path,
+            route_path = route_path,
+            sectionals_history_path = sectionals_history_path,
+            sectionals_raw_path = sectionals_raw_path,
+            jumps_path = jumps_path
+            )
         self.set_tpd_auth(tpd_user = tpd_user, tpd_passwd = tpd_passwd)
         self.set_sectionals_history_path(path = sectionals_history_path)
         self.set_sectionals_raw_path(path = sectionals_raw_path)
         self.set_jumps_path(path = jumps_path)
         if not self:
-            logger.warning('No licence key set by GmaxFeed - pass licence = "my_licence" to constructor, or set GMAXLICENCE="my_licence" as environment variable')
+            logger.warning(
+                'No licence key set by GmaxFeed - pass licence = "my_licence" to constructor, or set GMAXLICENCE="my_licence" as environment variable'
+                )
         
     def __bool__(self) -> bool:
         return self.licence is not None and self.get_tpd_auth() is not None
     
     def __repr__(self) -> str:
-        return "< TPDFeed, valid:{0}>".format(bool(self))
+        return "< TPDFeed, valid:{0} >".format(bool(self))
     
     def set_tpd_auth(self, tpd_user:str, tpd_passwd:str) -> None:
         if "TPD_USER" not in os.environ and tpd_user is not None:
@@ -1318,7 +1439,7 @@ class TPDFeed(GmaxFeed):
         # requests takes arg auth=(user, passwd)
         return (os.environ.get("TPD_USER"), os.environ.get("TPD_PASSWD"))
     
-    def set_race_pars_path(self, path:str=None) -> None:
+    def set_race_pars_path(self, path: str = None) -> None:
         """
         pars for each sharecode condiering ground, class, age. delivered as arrays of,
         p - Progress, distance from finish line
@@ -1326,15 +1447,24 @@ class TPDFeed(GmaxFeed):
         v - velocity
         sf, sl - stride frequency and length
         b - bearing, clockwise angle in radians from North
+        
         all are based on the timeline, eg, P(t), V(t), SF(t)..
-        easiest strategy to line up with race is by replacing t array with timestamps based on offtime indicated in progress feed, offtime = progress['T'] - progress['R']. then par['t'] = [offtime + i for i in par['t']].
-        this strategy is easy to implement but has issue around startline where a fraction of a second either way makes a large difference to the position on on the timeline. Alternative more robust method would be to identify the timestamp
-        at which the leader is RaceLength-50m from the finish, and match that with the index in the pars at which the par lines are also RaceLength-50m from the finish and use that timestamp as the reference point.
+        easiest strategy to line up with race is by replacing t array with 
+        timestamps based on offtime indicated in progress feed,
+        offtime = progress['T'] - progress['R']. then par['t'] = [offtime + i for i in par['t']].
+        
+        this strategy is easy to implement but has issue around startline where
+        a fraction of a second either way makes a large difference to the position
+        on on the timeline. Alternative more robust method would be to identify
+        the timestamp at which the leader is RaceLength-50m from the finish, and
+        match that with the index in the pars at which the par lines are also
+        RaceLength-50m from the finish and use that timestamp as the reference
+        point.
         """
         self._race_pars = path or os.environ.get('RACE_PARS_PATH') or 'race_pars'
         self._confirm_exists(self._race_pars)
     
-    def set_average_times_path(self, path:str=None) -> None:
+    def set_average_times_path(self, path: str = None) -> None:
         self._average_times = path or os.environ.get('AVE_TIMES_PATH') or 'average_times'
         self._confirm_exists(self._average_times)
 
@@ -1360,8 +1490,10 @@ def update(start_date: datetime or str = None,
         GmaxRacetype filter to use. The default is None.
     """
     gmax_feed = GmaxFeed()
-    gmax_feed.update(start_date = start_date,
-                     end_date = end_date,
-                     request = request,
-                     filter = filter,
-                     **kwargs)
+    gmax_feed.update(
+        start_date = start_date,
+        end_date = end_date,
+        request = request,
+        filter = filter,
+        **kwargs
+        )
