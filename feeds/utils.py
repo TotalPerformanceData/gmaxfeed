@@ -575,11 +575,14 @@ def get_start_finish_timestamps(packets: list) -> dict:
     for row in packets:
         if row["R"] > 0 and start_time is None:
             # new start timestamp detected
-            start_time = datetime.strptime(row["T"], "%Y-%m-%dT%H:%M:%S.%fZ") - timedelta(seconds = row["R"])
+            start_time = datetime.strptime(
+                row["T"],
+                "%Y-%m-%dT%H:%M:%S.%fZ"
+                ) - timedelta(seconds = row["R"])
         elif start_time is not None and row["R"] == 0:
             # likely a false start, reset
             start_time = None
-        if start_time and row["P"] == 0:
+        if start_time and row["P"] == 0 and row["R"]:
             finish_time = start_time + timedelta(seconds = row["R"])
     return {
         "start_time": start_time,
