@@ -468,13 +468,15 @@ def process_url_response(url: str,
     if txt:
         if version == 1:
             data = json.loads(txt)
-            dump_file(data = data, direc = direc, fname = fname)
+            if data:
+                dump_file(data = data, direc = direc, fname = fname)
         elif version == 2:
             data = {row['I']:row for row in json.loads(txt)}
             dump_file(data = data, direc = direc, fname = fname)
         elif version == 3:
             data = [json.loads(row) for row in txt.splitlines() if len(row) > 5]
-            dump_file(data = data, direc = direc, fname = fname)
+            if data:
+                dump_file(data = data, direc = direc, fname = fname)
         elif version == 4:
             if txt not in ["File not available - please contact us.", "Permission Denied", "{}"]:
                 data = txt

@@ -412,7 +412,9 @@ class GmaxFeed:
         self.set_tracker_performance_path(path = performance_path)
         if not self:
             raise Exception(
-                'No licence key set by GmaxFeed, pass licence = "my_licence" to constructor, or set GMAXLICENCE = "my_licence" as environment variable'
+                ['No licence key set by GmaxFeed, pass licence = "my_licence" to '
+                ' constructor, or set GMAXLICENCE = "my_licence" as environment '
+                'variable'][0]
                 )
     
     def __bool__(self) -> bool:
@@ -522,7 +524,9 @@ class GmaxFeed:
                     return data
         # if data is None file doesn't exist, try downloading a new file if offline is False
         if not offline:
-            url = 'https://www.gmaxequine.com/TPD/client/fixtures.ashx?DateLocal={0}&k={1}'.format(date_str, self.licence)
+            url = 'https://www.gmaxequine.com/TPD/client/fixtures.ashx?DateLocal={0}&k={1}'.format(
+                date_str, self.licence
+                )
             data = process_url_response(
                 url = url,
                 direc = self._fixtures_path,
@@ -588,7 +592,9 @@ class GmaxFeed:
                     return data.get(sharecode) or False
         # if data is None file doesn't exist, try downloading a new file if offline is False
         if not offline:
-            url = 'https://www.gmaxequine.com/TPD/client/racelist.ashx?Sharecode={0}&k={1}'.format(sharecode, self.licence)
+            url = 'https://www.gmaxequine.com/TPD/client/racelist.ashx?Sharecode={0}&k={1}'.format(
+                sharecode, self.licence
+                )
             # returns a list of 1 dict or empty list - process manually here as don't want to cache just one race
             txt = read_url(url)
             if txt:
@@ -655,7 +661,9 @@ class GmaxFeed:
                         return data
         # if data is None file doesn't exist, try downloading a new file if offline is False
         if not offline:
-            url = 'https://www.gmaxequine.com/TPD/client/racelist.ashx?DateLocal={0}&k={1}'.format(date, self.licence)
+            url = 'https://www.gmaxequine.com/TPD/client/racelist.ashx?DateLocal={0}&k={1}'.format(
+                date, self.licence
+                )
             # returns a list of dicts
             data = process_url_response(
                 url = url,
@@ -761,7 +769,9 @@ class GmaxFeed:
             if data is not None:
                 return {'sc': sharecode, 'data': data}
         if not offline:
-            url = 'https://www.gmaxequine.com/TPD/client/points.ashx?Sharecode={0}&k={1}'.format(sharecode, self.licence)
+            url = 'https://www.gmaxequine.com/TPD/client/points.ashx?Sharecode={0}&k={1}'.format(
+                sharecode, self.licence
+                )
             # returns rows of dicts delimited by newline characters, r"\r\n", readlines() issue blank final element of list
             data = process_url_response(
                 url = url,
@@ -814,7 +824,9 @@ class GmaxFeed:
                     data = alter_sectionals_gate_label(sectionals = data)
                 return {'sc': sharecode, 'data': data}
         if not offline:
-            url = 'https://www.gmaxequine.com/TPD/client/sectionals.ashx?Sharecode={0}&k={1}'.format(sharecode, self.licence)
+            url = 'https://www.gmaxequine.com/TPD/client/sectionals.ashx?Sharecode={0}&k={1}'.format(
+                sharecode, self.licence
+                )
             # returns a list of dicts
             data = process_url_response(
                 url = url,
@@ -872,7 +884,9 @@ class GmaxFeed:
                     data = alter_sectionals_gate_label(sectionals = data)
                 return {'sc': sharecode, 'data': data}
         if not offline:
-            url = 'https://www.gmaxequine.com/TPD/client/sectionals-history.ashx?Sharecode={0}&k={1}'.format(sharecode, self.licence)
+            url = 'https://www.gmaxequine.com/TPD/client/sectionals-history.ashx?Sharecode={0}&k={1}'.format(
+                sharecode, self.licence
+                )
             # returns a list of dicts
             data = process_url_response(
                 url = url,
@@ -984,7 +998,9 @@ class GmaxFeed:
                     data = None
                 return {'sc': sharecode, 'data': data}
         if not offline:
-            url = 'https://www.gmaxequine.com/TPD/client/performance.ashx?Sharecode={0}&k={1}'.format(sharecode, self.licence)
+            url = 'https://www.gmaxequine.com/TPD/client/performance.ashx?Sharecode={0}&k={1}'.format(
+                sharecode, self.licence
+                )
             # returns a list of dicts
             data = process_url_response(
                 url = url,
@@ -1040,7 +1056,9 @@ class GmaxFeed:
             if data is not None:
                 return {'sc': sharecode, 'data': data}
         if not offline:
-            url = 'https://www.gmaxequine.com/TPD/client/jumps.ashx?Sharecode={0}&k={1}'.format(sharecode, self.licence)
+            url = 'https://www.gmaxequine.com/TPD/client/jumps.ashx?Sharecode={0}&k={1}'.format(
+                sharecode, self.licence
+                )
             # returns a list of dicts
             data = process_url_response(
                 url = url,
@@ -1100,7 +1118,9 @@ class GmaxFeed:
                 output["data"] = data
                 return output
         if not offline:
-            url = 'https://www.gmaxequine.com/TPD/client/routes.ashx?Racecourse={0}&k={1}'.format(course_code, self.licence)
+            url = 'https://www.gmaxequine.com/TPD/client/routes.ashx?Racecourse={0}&k={1}'.format(
+                course_code, self.licence
+                )
             # returns a kml encoded text file
             output["data"] = process_url_response(
                 url = url,
