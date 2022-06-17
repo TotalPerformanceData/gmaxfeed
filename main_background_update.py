@@ -77,8 +77,17 @@ class BackgroundGmaxUpdater(Scheduler):
 
 
 if __name__ == "__main__":
-    requests = [x for x in ["sectionals", "points", "sectionals-raw", "sectionals-history", "performance", "obstacles"]
-                if x in sys.argv or x in os.environ]
+    requests = [
+        x for x in [
+            "sectionals",
+            "points",
+            "sectionals-raw",
+            "sectionals-history",
+            "performance",
+            "obstacles"
+            ]
+        if x in sys.argv or x in os.environ
+        ]
     requests = requests or ["sectionals", "points"]
     logger.info("running main_background_update.py with args: {0}".format(requests))
     background_driver = BackgroundGmaxUpdater(requests = requests)

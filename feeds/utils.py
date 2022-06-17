@@ -290,7 +290,8 @@ def check_file_exists(direc: str, fname: str) -> True or None:
     used in conjuction with no_return flag, to stop existing files being
     loaded and returned and also to not waste time on file IO.
 
-    returns None if False to work with current logic.
+    returns None if False to work with current logic around the call to this
+    function.
 
     Parameters
     ----------
@@ -303,7 +304,8 @@ def check_file_exists(direc: str, fname: str) -> True or None:
     -------
     True or None
     """
-    return os.path.exists(os.path.join(direc, fname)) or None
+    path = os.path.join(direc, fname)
+    return (os.path.exists(path) and os.path.getsize(path) > 2) or None
 
 def read_file(path: str, is_json: bool = True) -> dict or list:
     """
