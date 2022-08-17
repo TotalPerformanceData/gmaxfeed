@@ -1031,6 +1031,9 @@ class GmaxFeed:
         no_return : bool, optional
             return None from target funcs, save memory when just updating files.
             The default is False.
+        metadata : dict, optional
+            dict of the race metadata for this race, as returned by
+            self.get_race(sharecode)
 
         Returns
         -------
@@ -1039,11 +1042,12 @@ class GmaxFeed:
         new = kwargs.get("new")
         offline = kwargs.get("offline")
         no_return = kwargs.get("no_return")
-        metadata = self.get_race(sharecode = sharecode, offline = offline)
+        metadata = kwargs.get("metadata") or \
+            self.get_race(sharecode = sharecode, offline = offline)
         if not metadata or \
             "RaceType" not in metadata or \
-            not any([x in metadata.get("RaceType", "").lower() for x in ['hurdle', 'chase', 'nh flat']]):
-            return {'sc': sharecode, 'data': None}
+            not any([x in metadata["RaceType"].lower() for x in ["hurdle", "chase", "nh flat"]]):
+            return {"sc": sharecode, "data": None}
         data = None
         if not new:
             if no_return:
@@ -1054,9 +1058,9 @@ class GmaxFeed:
             else:
                 data = load_file(direc = self._jumps_path, fname = sharecode)
             if data is not None:
-                return {'sc': sharecode, 'data': data}
+                return {"sc": sharecode, "data": data}
         if not offline:
-            url = 'https://www.gmaxequine.com/TPD/client/jumps.ashx?Sharecode={0}&k={1}'.format(
+            url = "https://www.gmaxequine.com/TPD/client/jumps.ashx?Sharecode={0}&k={1}".format(
                 sharecode, self.licence
                 )
             # returns a list of dicts
@@ -1068,7 +1072,7 @@ class GmaxFeed:
                 )
         if no_return:
             data = None
-        return {'sc': sharecode, 'data': data}
+        return {"sc": sharecode, "data": data}
     
     def get_route(self, course_code: str or int, **kwargs) -> dict:
         """
