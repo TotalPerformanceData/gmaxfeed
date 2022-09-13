@@ -820,7 +820,7 @@ class GmaxFeed:
             else:
                 data = load_file(direc = self._sectionals_path, fname = sharecode)
             if data is not None:
-                if sharecode[:2] == "65":
+                if sharecode[:2] in ["65", "66"]:
                     data = alter_sectionals_gate_label(sectionals = data)
                 return {'sc': sharecode, 'data': data}
         if not offline:
@@ -836,7 +836,7 @@ class GmaxFeed:
                 )
         if no_return:
             data = None
-        if data and sharecode[:2] == "65":
+        if data and sharecode[:2] in ["65", "66"]:
             data = alter_sectionals_gate_label(sectionals = data)
         return {'sc': sharecode, 'data': data}
     
