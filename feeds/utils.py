@@ -934,9 +934,13 @@ def compute_overall_race_metrics(sectionals: list,
         return []
     metrics = []
     runners = set([row["I"] for row in sectionals])
-    max_gate = max([row["G"] for row in sectionals],
-                   key = _gate_num)
-    min_time = min([row["R"] for row in sectionals if row["G"] == "Finish"])
+    max_gate = max(
+        [row["G"] for row in sectionals],
+        key = _gate_num
+        )
+    min_time = min(
+        [row["R"] for row in sectionals if row["G"] == "Finish"] or [0]
+        )
     for runner in runners:
         data = [row for row in sectionals if row["I"] == runner]
         if ignore_first:
@@ -962,7 +966,7 @@ def compute_overall_race_metrics(sectionals: list,
             "final_2f_distance": final_2f_distance,
             "final_2f_time": final_2f_time,
             "finish_speed_percentage": finish_speed_perc,
-            "time_behind": finish_time - min_time if finish_time else 1000.
+            "time_behind": finish_time - min_time if finish_time and min_time else None
             })
     return metrics
 
