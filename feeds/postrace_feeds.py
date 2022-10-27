@@ -79,8 +79,9 @@ os.environ['GMAXLICENCE'] = 'my_licence'
 from . import get_logger
 logger = get_logger(name = __name__)
 
-
-METRIC_GATES = {"65", "66", "67"}
+# some courses use metric units for sectional "G" field and needs to be changed
+# from "200m" to "1f" to pass through other sorts and parsers.
+METRIC_GATES = {"66", "67", "68"}
 
 
 class RaceMetadata:
@@ -91,7 +92,7 @@ class RaceMetadata:
     can define without data, and call set_filter() to apply to something later,
     such as in gmax_feed.get_data()
     """
-    def __init__(self, data:dict = None, direc:str = None):
+    def __init__(self, data: dict = None, direc: str = None):
         self.clear()
         self.import_data(data = data, direc = direc)
         self._filter = {}
