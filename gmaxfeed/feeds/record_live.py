@@ -58,7 +58,7 @@ if not os.path.exists(DIREC):
 
 _par_dir, _ = os.path.split(_dir)
 
-from . import get_logger
+from .. import get_logger
 logger = get_logger(name = __name__)
 
 

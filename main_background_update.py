@@ -21,8 +21,8 @@ from datetime import datetime, timedelta
 import time as systime
 from schedule import Scheduler
 
-from feeds import get_logger
-from feeds.postrace_feeds import GmaxFeed
+from gmaxfeed.feeds import get_logger
+from gmaxfeed.feeds.postrace_feeds import GmaxFeed
 
 
 logger = get_logger(name = "main_background_update")

@@ -76,7 +76,7 @@ os.environ['JUMPS_PATH'] = '/path/to/jumps'
 os.environ['GMAXLICENCE'] = 'my_licence'
 """
 
-from . import get_logger
+from .. import get_logger
 logger = get_logger(name = __name__)
 
 # some courses use metric units for sectional "G" field and needs to be changed
@@ -436,43 +436,43 @@ class GmaxFeed:
         if licence is not None:
             os.environ["GMAXLICENCE"] = licence
     
-    def _confirm_exists(self, path:str) -> bool:
+    def _confirm_exists(self, path: str) -> bool:
         if not os.path.exists(path):
             os.mkdir(path)
     
-    def set_fixtures_path(self, path:str = None) -> None:
+    def set_fixtures_path(self, path: str = None) -> None:
         self._fixtures_path = path or os.environ.get('FIXTURES_PATH') or 'fixtures'
         self._confirm_exists(self._fixtures_path)
     
-    def set_racelist_path(self, path:str = None) -> None:
+    def set_racelist_path(self, path: str = None) -> None:
         self._racelist_path = path or os.environ.get('RACELIST_PATH') or 'racelist'
         self._confirm_exists(self._racelist_path)
     
-    def set_sectionals_path(self, path:str = None) -> None:
+    def set_sectionals_path(self, path: str = None) -> None:
         self._sectionals_path = path or os.environ.get('SEC_PATH') or 'sectionals'
         self._confirm_exists(self._sectionals_path)
     
-    def set_gps_path(self, path:str = None) -> None:
+    def set_gps_path(self, path: str = None) -> None:
         self._gps_path = path or os.environ.get('GPS_PATH') or 'gpsData'
         self._confirm_exists(self._gps_path)
     
-    def set_route_path(self, path:str = None) -> None:
+    def set_route_path(self, path: str = None) -> None:
         self._route_path = path or os.environ.get('ROUTE_PATH') or 'routes'
         self._confirm_exists(self._route_path)
     
-    def set_sectionals_history_path(self, path:str = None) -> None:
+    def set_sectionals_history_path(self, path: str = None) -> None:
         self._sectionals_history_path = path or os.environ.get('SEC_HIST_PATH') or 'sectionals-hist'
         self._confirm_exists(self._sectionals_history_path)
     
-    def set_sectionals_raw_path(self, path:str = None) -> None:
+    def set_sectionals_raw_path(self, path: str = None) -> None:
         self._sectionals_raw_path = path or os.environ.get('SEC_RAW_PATH') or 'sectionals-raw'
         self._confirm_exists(self._sectionals_raw_path)
     
-    def set_jumps_path(self, path:str = None) -> None:
+    def set_jumps_path(self, path: str = None) -> None:
         self._jumps_path = path or os.environ.get('JUMPS_PATH') or 'jumps'
         self._confirm_exists(self._jumps_path)
     
-    def set_tracker_performance_path(self, path:str = None) -> None:
+    def set_tracker_performance_path(self, path: str = None) -> None:
         self._errors_path = path or os.environ.get('PERFORMANCE_PATH') or 'tracker-errors'
         self._confirm_exists(self._errors_path)
     
@@ -824,7 +824,7 @@ class GmaxFeed:
             else:
                 data = load_file(direc = self._sectionals_path, fname = sharecode)
             if data is not None:
-                if sharecode[:2] in METRIC_GATES:
+                if not no_return and sharecode[:2] in METRIC_GATES:
                     data = alter_sectionals_gate_label(sectionals = data)
                 return {'sc': sharecode, 'data': data}
         if not offline:
@@ -884,7 +884,7 @@ class GmaxFeed:
                     fname = sharecode
                     )
             if data is not None:
-                if sharecode[:2] in METRIC_GATES:
+                if not no_return and sharecode[:2] in METRIC_GATES:
                     data = alter_sectionals_gate_label(sectionals = data)
                 return {'sc': sharecode, 'data': data}
         if not offline:
@@ -948,11 +948,14 @@ class GmaxFeed:
                     fname = sharecode
                     )
             if data is not None:
-                if sharecode[:2] in METRIC_GATES:
+                if not no_return and sharecode[:2] in METRIC_GATES:
                     data = alter_sectionals_gate_label(sectionals = data)
                 return {'sc': sharecode, 'data': data}
         if not offline:
-            url = 'https://www.gmaxequine.com/TPD/client/sectionals-raw.ashx?Sharecode={0}&k={1}'.format(sharecode, licence)
+            url = 'https://www.gmaxequine.com/TPD/client/sectionals-raw.ashx?Sharecode={0}&k={1}'.format(
+                sharecode,
+                licence
+                )
             # returns a list of dicts
             data = process_url_response(
                 url = url,
@@ -1243,7 +1246,9 @@ class GmaxFeed:
         if type(sharecodes) is dict:
             if filter is None:
                 filter = RaceMetadata()
-                if all([x not in request for x in ['sectionals-raw', 'sectionals-history', 'points', 'obstacles']]):
+                if all([x not in request for x in [
+                        'sectionals-raw', 'sectionals-history', 'points', 'obstacles']
+                        ]):
                     filter.set_filter(published = True)
             filter.apply_filter(data = sharecodes)
             sharecodes = list(filter)
@@ -1279,10 +1284,10 @@ class GmaxFeed:
                ) -> None:
         """
         update all the cached file in daterange given, only refresh if new passed. 
-        racelists are always freshed if file mtime is less than a week after the date it refers
-        if licence key is only activated for one of the above feeds then make sure 
-        to pass only the request set you want, else unauthorsied feed/s or will 
-        have folder full of empty text files
+        racelists are always freshed if file mtime is less than a week after the
+        date it refers if licence key is only activated for one of the above
+        feeds then make sure to pass only the request set you want, else
+        unauthorsied feed/s or will have folder full of empty text files
         
         Parameters
         ----------

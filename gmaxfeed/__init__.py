@@ -3,14 +3,14 @@
 """
 Created on Wed Nov 18 17:26:56 2020
 
-@author: tpd
+@author: George Swindells
 """
 
 import os
 import sys
 import logging
 
-# initialise subpackages which aren't automatically imported by just the top level import statement
+# initialise subpackages which aren't automatically imported at top level
 import dateutil
 import dateutil.tz
 import dateutil.parser
@@ -23,7 +23,10 @@ if "MAIN_DIR" in os.environ:
 if "LOGS_DIR" in os.environ:
     LOGS_DIR = os.environ["LOGS_DIR"]
 else:
-    LOGS_DIR = os.path.join(os.path.split(os.path.abspath(os.path.dirname(__file__)))[0], "logs")
+    LOGS_DIR = os.path.join(
+        os.path.expanduser("~"),
+        "logs"
+        )
 if not os.path.exists(LOGS_DIR):
     os.mkdir(LOGS_DIR)
 
@@ -58,7 +61,9 @@ def get_logger(name: str,
         backupCount = 10
         )
     ch.setLevel(level)
-    formatter = logging.Formatter("%(asctime)s - File:%(filename)s - Line:%(lineno)d - %(levelname)s | %(message)s")
+    formatter = logging.Formatter(
+        "%(asctime)s - File:%(filename)s - Line:%(lineno)d - %(levelname)s | %(message)s"
+        )
     ch.setFormatter(formatter)
     if handler_only:
         return ch

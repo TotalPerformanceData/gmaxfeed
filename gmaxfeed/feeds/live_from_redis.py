@@ -53,7 +53,14 @@ def deal_with_datagram(data:str) -> None:
             add_directory(raceid = raceid, path = par_fol)
         if data['V'] > 23.5:
             data['V'] = 18.
-        string = '{0},{1},{2},{3},{4},{5}\n'.format(data['T'][:10] + ' ' + data['T'][11:-1], data['X'], data['Y'], data['V'], data['SF'], data['P'])
+        string = '{0},{1},{2},{3},{4},{5}\n'.format(
+            data['T'][:10] + ' ' + data['T'][11:-1],
+            data['X'],
+            data['Y'],
+            data['V'],
+            data['SF'],
+            data['P']
+            )
         with open(os.path.join(par_fol, 'points', data['I']+'.txt'), 'a') as f:
             f.write(string)
     elif data['K'] == 5: # progress
@@ -61,7 +68,7 @@ def deal_with_datagram(data:str) -> None:
         par_fol = os.path.join(_main_dir, 'test_store', raceid)
         if not os.path.exists(par_fol):
             add_directory(raceid = raceid, path = par_fol)
-        data['T'] = data['T'][:10] + ' ' + data['T'][11:-1] # for benefit of plotly in client side, but is horrible that plotly doesn't recognise ISO
+        data['T'] = data['T'][:10] + ' ' + data['T'][11:-1] # for benefit of plotly in client side, but it's horrible that plotly doesn't recognise ISO
         string = json.dumps(data) + '\n'
         with open(os.path.join(par_fol, 'progress', data['I']+'.txt'), 'a') as f:
             f.write(string)

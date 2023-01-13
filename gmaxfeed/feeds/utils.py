@@ -24,7 +24,7 @@ from bs4 import BeautifulSoup
 
 MAX_THREADS = 6
 
-from . import get_logger
+from .. import get_logger
 
 logger = get_logger(name = __name__)
 
@@ -642,8 +642,9 @@ def alter_sectionals_gate_label(sectionals: list) -> list:
     -------
     list
     """
-    for row in sectionals:
-        row["G"] = alter_gate_label(row["G"])
+    if sectionals:
+        for row in sectionals:
+            row["G"] = alter_gate_label(row["G"])
     return sectionals
 
 def convert_sectionals_to_1f(sectionals: list) -> list:
@@ -1328,7 +1329,9 @@ def haversine(x1: np.ndarray,
     x2 = np.deg2rad(x2)
     y1 = np.deg2rad(y1)
     y2 = np.deg2rad(y2)
-    return 12730000*np.arcsin(((np.sin((y2-y1)*0.5)**2) + np.cos(y1)*np.cos(y2)*np.sin((x2-x1)*0.5)**2)**0.5)
+    return 12730000*np.arcsin(
+        ((np.sin((y2-y1)*0.5)**2) + np.cos(y1)*np.cos(y2)*np.sin((x2-x1)*0.5)**2)**0.5
+        )
 
 def compute_bearing(coords1: (float, float),
                     coords2: (float, float)
@@ -1350,7 +1353,10 @@ def compute_bearing(coords1: (float, float),
     """
     lon1, lat1 = np.deg2rad(coords1)
     lon2, lat2 = np.deg2rad(coords2)
-    return np.arctan2(np.sin(lon2-lon1)*np.cos(lat2) , np.cos(lat1)*np.sin(lat2)-np.sin(lat1)*np.cos(lat2)*np.cos(lon2-lon1))
+    return np.arctan2(
+        np.sin(lon2-lon1)*np.cos(lat2),
+        np.cos(lat1)*np.sin(lat2)-np.sin(lat1)*np.cos(lat2)*np.cos(lon2-lon1)
+        )
 
 def compute_bearing_difference(b1: np.ndarray,
                                b2: np.ndarray
@@ -1399,12 +1405,15 @@ def compute_new_coords(X1: np.ndarray,
     """
     X1 = np.deg2rad(X1)
     Y1 = np.deg2rad(Y1)
-    d = D/6378100.
+    d = D / 6378100.
     Y2 = np.arcsin(np.sin(Y1)*np.cos(d) + np.cos(Y1)*np.sin(d)*np.cos(B))
-    X2 = X1 + np.arctan2(np.sin(B)*np.sin(d)*np.cos(Y1), np.cos(d)-np.sin(Y1)*np.sin(Y2))
+    X2 = X1 + np.arctan2(
+        np.sin(B)*np.sin(d)*np.cos(Y1),
+        np.cos(d)-np.sin(Y1)*np.sin(Y2)
+        )
     return np.rad2deg(X2), np.rad2deg(Y2)
 
-def compute_mean_bearing(bearings: np.ndarray) -> np.float:
+def compute_mean_bearing(bearings: np.ndarray) -> np.float64:
     """
     compute mean bearing for the given bearings, given in radians.
     
@@ -1416,7 +1425,7 @@ def compute_mean_bearing(bearings: np.ndarray) -> np.float:
 
     Returns
     -------
-    np.float
+    np.float64
     """
     x = np.nanmean(np.cos(bearings)) or 0.00000001
     y = np.nanmean(np.sin(bearings))
