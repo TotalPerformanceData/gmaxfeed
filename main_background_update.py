@@ -21,7 +21,7 @@ from datetime import datetime, timedelta
 import time as systime
 from schedule import Scheduler
 
-from gmaxfeed.feeds import get_logger
+from gmaxfeed import get_logger
 from gmaxfeed.feeds.postrace_feeds import GmaxFeed
 
 
