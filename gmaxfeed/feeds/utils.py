@@ -669,9 +669,11 @@ def convert_sectionals_to_1f(sectionals: list) -> list:
     new_sects = []
     runners = set([row["I"] for row in sectionals])
     all_gates = list(set([row["G"] for row in sectionals]))
-    fur_gates = sorted([g for g in all_gates if int(_gate_num(g)) == _gate_num(g)],
-                        key = _gate_num,
-                        reverse = True)
+    fur_gates = sorted(
+        [g for g in all_gates if int(_gate_num(g)) == _gate_num(g)],
+        key = _gate_num,
+        reverse = True
+        )
     for gate in fur_gates:
         for runner in runners:
             runner_sects = [row for row in sectionals if row["I"] == runner]
@@ -696,6 +698,10 @@ def convert_sectionals_to_1f(sectionals: list) -> list:
                 if b is not None:
                     d["B"] = b
                 new_sects.append(d)
+    # check that the data isn't for a race with weird gates, 7.78f etc. easiest
+    # check is at this point the logic above will only have gates for "Finish"
+    if all([row["G"] == "Finish" for row in new_sects]):
+        return []
     return new_sects
 
 def group_sectionals_to_1f(sectionals: list) -> list:
