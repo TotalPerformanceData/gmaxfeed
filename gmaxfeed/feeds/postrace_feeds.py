@@ -969,6 +969,106 @@ class GmaxFeed:
             data = alter_sectionals_gate_label(sectionals = data)
         return {'sc': sharecode, 'data': data}
     
+    def get_sectionals_modified(self,
+                                dt: str or datetime,
+                                **kwargs
+                                ) -> dict:
+        """
+        get sectionals modified feed for a given datetime.
+        
+        spec : 
+        https://www.gmaxequine.com/downloads/GX-UG-00059%202021-06-21%20Gmax%20Race%20Modified%20Data%20Feed%20Specification.pdf
+
+        given a datetime in ISO format, YYYY-mm-ddTHH:MM:SSZ, return a list of
+        gmax sharecodes for which the post race data has been modified any time
+        between the given datetime and the following 7 days.
+        
+        This method does not cache the response.
+        
+        fields in each record are:
+            "I": str, sharecode
+            "Modified": datetime, UTC tzaware datetime of modification
+            "Published": bool, publish status of race
+
+        Parameters
+        ----------
+        sharecode : str
+            Gmax/TPD sharecode/race_id.
+        
+        **params
+        new : bool, optional
+            whether to force download a new file.
+            The default is False.
+        offline : bool, optional
+            whether to treat request without internet connection.
+            The default is False.
+        no_return : bool, optional
+            return None from target funcs, save memory when just updating files.
+            The default is False.
+
+        Returns
+        -------
+        dict - map of sharecode to it's modified timestamp and published status
+        """
+        data = {}
+        if type(dt) is str:
+            dt = dateutil.parser.parse(dt)
+        datestring = dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+        url = 'https://www.gmaxequine.com/TPD/client/sectionals-modified.ashx?DateFrom={0}&k={1}'.format(
+            datestring, self.licence
+            )
+        txt = read_url(url)
+        if txt:
+            data = json.loads(txt)
+            for row in data:
+                row["Modified"] = dateutil.parser.parse(row["Modified"])
+            data = {row["I"] : row for row in data}
+        return data
+
+    def get_sectionals_modified_range(self,
+                                      start_date: datetime or str = None,
+                                      end_date: datetime or str = None,
+                                      **kwargs
+                                      ) -> dict:
+        """
+        get sectionals modified feed for a range of dates.
+
+        Parameters
+        ----------
+        start_date : datetime or str, optional
+            lower date boundary, inclusive. The default is None.
+        end_date : datetime or str, optional
+            upper date boundary, inclusive. The default is None.
+
+        Returns
+        -------
+        dict - map of sharecode to it's modified timestamp and published status
+        """
+        if start_date is None:
+            start_date = datetime(2016, 1, 1)
+        else:
+            start_date = to_datetime(start_date)
+        if end_date is None:
+            end_date = datetime.utcnow()
+        else:
+            end_date = to_datetime(end_date)
+        if end_date < start_date:
+            end_date = start_date
+        range_ = (end_date - start_date).days
+        dates = [
+            start_date + timedelta(days = dt) for dt in range(0, range_, 6)
+            ]
+        dates.append(end_date)
+        results = apply_thread_pool(
+            self.get_sectionals_modified,
+            dates
+            )
+        data = {}
+        for result in results:
+            if result:
+                data.update(result)
+        return data
+
     def get_tracker_performance(self, sharecode: str, **kwargs) -> dict:
         """
         get performance/accuracy feed for an iterable of sharecodes.
