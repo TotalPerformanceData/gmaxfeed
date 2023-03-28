@@ -81,7 +81,7 @@ logger = get_logger(name = __name__)
 
 # some courses use metric units for sectional "G" field and needs to be changed
 # from "200m" to "1f" to pass through other sorts and parsers.
-METRIC_GATES = {"66", "67", "68"}
+METRIC_GATES = {"65", "66", "67", "68", "31"}
 
 
 class RaceMetadata:
