@@ -977,6 +977,54 @@ def compute_overall_race_metrics(sectionals: list,
             })
     return metrics
 
+def estimate_off_time(sharecodes: list, gmax_feed) -> dict:
+    """
+    estimate the UTC offtime for the given list of sharecodes, by using the
+    sectionals and sectionals-raw feeds. (requires access to both).
+    
+    external client typically don't have access to the sectionals-raw feed, so
+    this should be considered a function internal-use only.
+
+    Parameters
+    ----------
+    sharecodes : list
+        list of sharecodes to estimate exact off time.
+    gmax_feed : GmaxFeed
+        GmaxFeed object.
+
+    Returns
+    -------
+    dict
+    """
+    data = gmax_feed.get_data(
+        sharecodes = sharecodes,
+        request = {"sectionals", "sectionals-raw"}
+        )
+    output = {}
+    for sc in sharecodes:
+        sects = data["sectionals"][sc]
+        sec_raw = data["sectionals-raw"][sc]
+        if not sects or not sec_raw:
+            output[sc] = None
+            continue
+        runner_finishes = {
+            row["I"]: dateutil.parser.parse(row['T']) for row in sec_raw
+            if row["G"] == "Finish"
+            }
+        runner_times = {
+            row["I"]: row["R"] for row in sects if row["G"] == "Finish"
+            }
+        offtimes = [
+            (runner_finishes[k] - timedelta(seconds = runner_times[k])).timestamp()
+            for k in runner_finishes
+            if k in runner_times
+            ]
+        st = datetime.utcfromtimestamp(
+            np.mean(offtimes)
+            ).replace(tzinfo = dateutil.tz.UTC) if offtimes else None
+        output[sc] = st
+    return output
+
 def list_broken_progress_field(sharecodes: list, gmax_feed) -> list:
     """
     list sharecodes where the points have P field which does decrease through race
@@ -1032,6 +1080,56 @@ def list_broken_sectional_field(sharecodes: list, gmax_feed) -> list:
                 if sumn and sumn != len(sects):
                     broken.append(sc)
     return broken
+
+def create_broken_post_race_excel(gmax_feed,
+                                  lower_date: datetime = None,
+                                  upper_date: datetime = None,
+                                  ) -> None:
+    """
+    create an excel doc summarising which sharecodes have a broken post race
+    feature.
+
+    Parameters
+    ----------
+    gmax_feed : GmaxFeed
+        instance of GmaxFeed used to make the API requests.
+    lower_date : datetime, optional
+        lower date boundary. The default is None.
+    upper_date : datetime, optional
+        upper date boundary. The default is None.
+    """
+    import pandas as pd
+    racelist = gmax_feed.get_racelist_range(
+        lower_date,
+        upper_date
+        )
+    broken = list_broken_progress_field(
+        sharecodes = racelist,
+        gmax_feed = gmax_feed
+        )
+    _ = gmax_feed.get_data(
+        broken,
+        request = {"points"},
+        no_return = True,
+        new = True
+        )
+    broken = list_broken_progress_field(
+        sharecodes = broken,
+        gmax_feed = gmax_feed
+        )
+    df = pd.DataFrame.from_records(
+        [racelist[sc] for sc in broken]
+        )
+    df = df.astype({"I": str})
+    df = df.sort_values(["RaceType", "PostTime"])
+    df.assign(
+        I = [str(x).zfill(14) for x in df["I"].to_numpy()]
+        )
+    df.to_excel(
+        "broken_racetypes_{0}.xlsx".format(
+            datetime.today().strftime("%Y%d%m")
+            )
+        )
 
 def _compute_derivatives(data: dict, race_length: float) -> dict:
     """
