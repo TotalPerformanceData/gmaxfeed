@@ -1310,6 +1310,9 @@ class GmaxFeed:
         
         multithreaded entry point for getting big selection of data, 
         downloading new if not present, else using cached version.
+        
+        note given sharecodes will only appear in the response if the fetched
+        data evaluates to True, else the sharecode is dropped from the response.
 
         Parameters
         ----------

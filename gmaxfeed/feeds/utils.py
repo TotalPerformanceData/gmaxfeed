@@ -1002,8 +1002,8 @@ def estimate_off_time(sharecodes: list, gmax_feed) -> dict:
         )
     output = {}
     for sc in sharecodes:
-        sects = data["sectionals"][sc]
-        sec_raw = data["sectionals-raw"][sc]
+        sects = data["sectionals"].get(sc)
+        sec_raw = data["sectionals-raw"].get(sc)
         if not sects or not sec_raw:
             output[sc] = None
             continue
