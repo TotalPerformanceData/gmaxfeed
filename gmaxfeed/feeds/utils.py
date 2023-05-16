@@ -942,9 +942,9 @@ def compute_overall_race_metrics(sectionals: list,
     metrics = []
     runners = set([row["I"] for row in sectionals])
     max_gate = max(
-        [row["G"] for row in sectionals],
-        key = _gate_num
-        )
+        sectionals,
+        key = lambda row: row["L"]
+        )["G"]
     min_time = min(
         [row["R"] for row in sectionals if row["G"] == "Finish"] or [0]
         )
@@ -959,8 +959,8 @@ def compute_overall_race_metrics(sectionals: list,
             number_strides = sum([row.get("N", 0) for row in data])
             time = sum([row.get("S", 0) for row in data])
         finish_time = sum([row.get("R", 0) for row in data if row["G"] == "Finish"]) or None
-        final_2f_time = sum([row.get("S", 0) for row in data if _gate_num(row["G"]) <= 2.])
-        final_2f_distance = sum([row.get("D", 0) for row in data if _gate_num(row["G"]) <= 2.])
+        final_2f_time = sum([row.get("S", 0) for row in data if (row["L"] / 201.16) <= 2.])
+        final_2f_distance = sum([row.get("D", 0) for row in data if (row["L"] / 201.16) <= 2.])
         finish_speed_perc = (final_2f_distance / final_2f_time) / (distance_ran / time)
         metrics.append({
             "runner_sharecode": runner,
@@ -1146,9 +1146,15 @@ def _compute_derivatives(data: dict, race_length: float) -> dict:
     -------
     dict
     """
-    average_sl = np.sum([gate['D'] for gate in data.values()]) / np.sum([gate['N'] for gate in data.values() if 'N' in gate and gate['D'] > 0])
+    average_sl = np.sum((
+        [gate['D'] for gate in data.values()]) / 
+        np.sum([gate['N'] for gate in data.values() if 'N' in gate and gate['D'] > 0]
+        ))
     average_sf = np.sum([gate['N'] for gate in data.values() if 'N' in gate]) / data['Finish']['R']
-    fin_speed = np.sum([gate['D'] for gate in data.values() if _gate_num(gate['G']) < 1.75]) / np.sum([gate['S'] for gate in data.values() if _gate_num(gate['G']) < 1.75])
+    fin_speed = np.sum((
+        [gate['D'] for gate in data.values() if (gate["L"] / 201.16) <= 1.75]) /
+        np.sum([gate['S'] for gate in data.values() if (gate["L"] / 201.16) <= 1.75]
+        ))
     av_speed = race_length / data['Finish']['R'] # some issues with this, can't use actual data['D'] because of opening distance occasionally being 0, and race-length often underestimates the distance like at Fontwell.
     fin_perc = 100 * fin_speed / av_speed
     sections = {gate['G']:gate for gate in data.values()}
