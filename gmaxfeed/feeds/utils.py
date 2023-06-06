@@ -283,6 +283,22 @@ def to_datetime(d: datetime or int or float or str = None, tz = None):
             d = d.astimezone(dateutil.tz.UTC).replace(tzinfo = None)
         return d
 
+def put_datetime(dt: datetime) -> str:
+    """
+    format datetime to ISO UTC string format as used in the GPS packets.
+
+    Parameters
+    ----------
+    dt : datetime
+
+    Returns
+    -------
+    str
+    """
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(dateutil.tz.UTC)
+    return dt.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-5] + 'Z'
+
 def check_file_exists(direc: str, fname: str) -> True or None:
     """
     check if file exists, return True if exists.
@@ -1051,7 +1067,8 @@ def list_broken_progress_field(sharecodes: list, gmax_feed) -> list:
 
 def list_broken_sectional_field(sharecodes: list, gmax_feed) -> list:
     """
-    list sharecodes where the points have P field which does decrease through race
+    list sharecodes where there exists broken records, eg, missing B field,
+    missing L field, missing D field, duplicate sections for a runner.
 
     Parameters
     ----------
