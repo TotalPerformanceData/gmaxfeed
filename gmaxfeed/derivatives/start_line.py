@@ -198,13 +198,13 @@ def create_start_lines(gmax_feed: GmaxFeed,
             for sc, sc_points in points.items():
                 if not sc_points:
                     continue
-                runners = list(set([row["I"] for row in sc_points]))
-                df = pd.DataFrame.from_records(sc_points)
                 # find the timestamp at which runner P fields begin to decrease
                 # and take runner coordinates at t-1 and t+1 to sample the init
                 # bearing for each race, then cache the coords near the start line.
                 # take negative reciprocal of the mean bearing for startline bearing
                 # and use with average x,y to create a polynomial to go into the record.
+                df = pd.DataFrame.from_records(sc_points)
+                runners = list(set([row["I"] for row in sc_points]))
                 max_p = df.P.max()
                 df2 = df[df.P < max_p]
                 runner_start_timestamps = df2[["I", "T"]].groupby("I").min()
@@ -297,10 +297,24 @@ def create_start_lines(gmax_feed: GmaxFeed,
                 if not sc_points:
                     continue
                 # identify timestamp in the stalls and extract coords
-                runners = list(set([row["I"] for row in sc_points]))
+                start_distance = max([row["P"] for row in sc_points]) - 2.
+                timestamp_boundary = min([
+                    dateutil.parser.parse(row["T"]) for row in sc_points
+                    ]) + timedelta(seconds = 30)
+                runners = list(set([
+                    row["I"] for row in sc_points
+                    if row["P"] > start_distance
+                    and dateutil.parser.parse(row["T"]) < timestamp_boundary
+                    and row["V"] < 2.
+                    ]))
                 start_timestamp = off_times.get(sc)
                 if not start_timestamp:
                     df = pd.DataFrame.from_records(sc_points)
+                    df = df[
+                        (df.P > start_distance) & (df.V < 2.)
+                        ]
+                    if len(df) == 0:
+                        continue
                     runner_count = df[["T", "I"]].groupby("T").count().reset_index()
                     valid_timestamps = runner_count[runner_count.I == len(runners)]["T"]
                     tempdf = df.loc[
@@ -310,8 +324,12 @@ def create_start_lines(gmax_feed: GmaxFeed,
                     tempdf = tempdf.assign(
                         V2 = np.power(tempdf.V, 2)
                         )
+                    if len(tempdf) == 0:
+                        continue
                     sum_sq_v = tempdf.groupby("T").sum()
                     min_sum_sq_v = sum_sq_v[sum_sq_v["V2"] == sum_sq_v["V2"].min()]
+                    if min_sum_sq_v.index.empty:
+                        continue
                     start_timestamp = min_sum_sq_v.index[0]
                 else:
                     start_timestamp -= timedelta(seconds = 1.5)
@@ -326,6 +344,9 @@ def create_start_lines(gmax_feed: GmaxFeed,
                     ["T", "X", "Y"]
                     ]
                 all_coordinates = pd.concat((all_coordinates, start_coords))
+            if all_coordinates.empty:
+                logger.info("all_coordinates dataframe is empty: {0}".format(race_type))
+                continue
             # once all coords have been extracted, find average X and Y.
             av_x = all_coordinates.X.mean()
             av_y = all_coordinates.Y.mean()
