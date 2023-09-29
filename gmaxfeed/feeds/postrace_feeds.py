@@ -908,6 +908,8 @@ class GmaxFeed:
         """
         get sectionals raw feed for an iterable of sharecodes.
 
+        internal use function.
+
         Parameters
         ----------
         sharecode : str
@@ -1073,6 +1075,8 @@ class GmaxFeed:
         """
         get performance/accuracy feed for an iterable of sharecodes.
 
+        internal use function for our own monitoring of tracker quality.
+
         Parameters
         ----------
         sharecode : str
@@ -1122,6 +1126,10 @@ class GmaxFeed:
     def get_obstacles(self, sharecode: str, **kwargs) -> dict:
         """
         get jumps feed for an iterable of sharecodes.
+
+        NOTE that the obstacle locations are only available from Dec 2020,
+        and in some cases may be missing after this date due to issues
+        surveying the locations on the day.
 
         Parameters
         ----------

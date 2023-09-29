@@ -12,6 +12,10 @@ pip install .
 
 Then the following examples and imports will work.
 
+NOTE that the python code contains some functions that are for internal
+use only. If the feed in the .py file isn't listed above or in the docs
+below then it's for internal use only and should be ignored by clients.
+
 ## PostraceFeeds.py
 
 ### GmaxFeed class
@@ -61,7 +65,9 @@ racelist = gmax_feed.get_racelist_range(
     )
 
 ```
-Calls all dates in the daterange start_date to end_date (inclusive), self.get_racelist(date = date, new = new) from a threadpool of max default 6 threads.
+Calls all dates in the daterange start_date to end_date (inclusive),
+self.get_racelist(date = date, new = new) from a threadpool of max default
+6 threads.
 
 ```python
 points = gmax_feed.get_points(sharecode:str, new:bool)
@@ -76,8 +82,11 @@ unless new is passed in which case a new file is downloaded from the gmax server
 If the file doesn't exist in the directory a new one is downloaded anyway.
 For the benefit of threadpools and identifying what has been returned, the
 return format is a dict of for example, {'sc':'01202006151340', 'data':data}.
-If the feed in the .py file isn't listed above or in the docs below then it's
-for internal use only.
+
+NOTE that the obstacle locations are only available from Dec 2020,
+and in some cases may be missing after this date due to issues
+surveying the locations on the day.
+
 
 ```python
 data = gmax_feed.get_data(
@@ -85,7 +94,8 @@ data = gmax_feed.get_data(
     request: set = {
         'sectionals',
         'sectionals-history',
-        'points', 'obstacles'
+        'points',
+        'obstacles'
         },
     new: bool = False,
     filter: RaceMetadata = None
@@ -198,21 +208,23 @@ filter.set_filter(
 
 Defines functions and houses directories/licence keys to access the TPD
 derivatives, par times for a race type in the ground/class/age, par attribute
-timelines, and other cool developments.
+timelines, and other potential cool developments.
 To be completed.
 
 ### Anecdotes and Specs
 
-Any problems please let me know via email or comments. Currently when run as
-main it downloads all sectionals and gps points files, but if you're not set up
-for one then remove it from the requests set or you'll end up with a folder full
-of empty braces. Daterange should also be set to your permissable daterange for
-the same reason as RaceLists will be stored for each day which will just be an
-empty list if you're not activated for the date in query.
+Any problems please let me know via email or comments. Currently when the main_update.py
+script is run it downloads all sectionals and gps points files, but if you're not
+set up for one then remove it from the requests set or you'll end up with a
+folder full of empty braces. Daterange should also be set to your permissable
+daterange for the same reason as RaceLists will be stored for each day which
+will just be an empty list if you're not activated for the date in query.
 
 Multi threaded to max of 6 threads for high speed - if you're going to download
-a back history please do so overnight or in the morning so as not to potentially
-add to the latency of the live races on the day.
+a back history please do so between 0400 to 1200 UTC to reduce the risk of
+potentially adding to the latency of the live races on the day due to increased
+load on Gmax servers. (In theory this shouldn't affect the live data, but
+better to be cautious.)
 
 Requires an active licence key obtained by purchase from 
 Total Performance Data, http://www.totalperformancedata.com/ .
