@@ -253,7 +253,7 @@ def create_start_lines(gmax_feed: GmaxFeed,
                     )
                 if np.isnan(mean_bearing):
                     continue
-                perpendicular_bearing = -1 / mean_bearing
+                perpendicular_bearing = mean_bearing + (np.pi/2)
                 xy1 = (
                     np.mean(all_coordinates.X),
                     np.mean(all_coordinates.Y)
