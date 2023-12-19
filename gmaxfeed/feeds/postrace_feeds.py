@@ -709,6 +709,7 @@ class GmaxFeed:
         """
         new = kwargs.get("new")
         offline = kwargs.get("offline")
+        max_threads = kwargs.get("max_threads")
         if start_date is None:
             start_date = datetime(2016, 1, 1)
         else:
@@ -726,7 +727,8 @@ class GmaxFeed:
             self.get_racelist,
             dates,
             new = new,
-            offline = offline
+            offline = offline,
+            max_threads = max_threads
             )
         data = {}
         for row in result:
@@ -1046,6 +1048,7 @@ class GmaxFeed:
         -------
         dict - map of sharecode to it's modified timestamp and published status
         """
+        max_threads = kwargs.get("max_threads")
         if start_date is None:
             start_date = datetime(2016, 1, 1)
         else:
@@ -1063,7 +1066,8 @@ class GmaxFeed:
         dates.append(end_date)
         results = apply_thread_pool(
             self.get_sectionals_modified,
-            dates
+            dates,
+            max_threads = max_threads
             )
         data = {}
         for result in results:
@@ -1348,6 +1352,9 @@ class GmaxFeed:
         no_return : bool, optional
             return None from target funcs, save memory when just updating files.
             The default is False.
+        max_threads : int, optional
+            Maximum number of threads to use in threadpool.
+            The default is MAX_THREADS.
 
         Returns
         -------
@@ -1425,6 +1432,9 @@ class GmaxFeed:
         no_return : bool, optional
             return None from target funcs, save memory when just updating files.
             The default is True, and will always be overridden to be True.
+        max_threads : int, optional
+            Maximum number of threads to use in threadpool.
+            The default is MAX_THREADS.
         """
         if start_date is None:
             start_date = datetime.now(tz = timezone.utc) - timedelta(days = 14)

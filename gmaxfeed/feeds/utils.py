@@ -557,12 +557,25 @@ def apply_thread_pool(func,
         whether to ignore returns for the func to save memory for file system
         updates.
         The default is False.
+    max_threads : int, optional
+        maximum number of threads to use in the threadpool.
+        The default is MAX_THREADS
 
     Returns
     -------
     list
     """
-    threads = min([MAX_THREADS, len(iterable)])
+    max_threads = kwargs.get("max_threads") or MAX_THREADS
+    if type(max_threads) is not int:
+        logger.warning("invalid type for max_threads: {0}".format(max_threads))
+        max_threads = MAX_THREADS
+    if max_threads > 20:
+        logger.warning(
+            "max_threads > 10 can cause severe server slowdowns, "
+            "overridden and set to internal MAX_THREADS of {0}".format(MAX_THREADS)
+            )
+        max_threads = MAX_THREADS
+    threads = min([max_threads, len(iterable)])
     if threads > 1:
         with concurrent.futures.ThreadPoolExecutor(threads) as pool:
             results = [pool.submit(func, x, **kwargs) for x in iterable]
