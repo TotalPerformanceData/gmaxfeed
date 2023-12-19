@@ -61,7 +61,8 @@ class BackgroundGmaxUpdater(Scheduler):
         _ = GMAX_FEED.update(
             start_date = start_date,
             end_date = end_date,
-            request = self.requests
+            request = self.requests,
+            max_threads = 1
             )
 
     def driver(self):
