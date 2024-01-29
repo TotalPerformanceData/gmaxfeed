@@ -979,7 +979,7 @@ def compute_overall_race_metrics(sectionals: list,
         )
     for runner in runners:
         data = [row for row in sectionals if row["I"] == runner]
-        if ignore_first:
+        if ignore_first and len(data) > 1:
             distance_ran = sum([row.get("D", 0) for row in data if row["G"] != max_gate])
             number_strides = sum([row.get("N", 0) for row in data if row["G"] != max_gate])
             time = sum([row.get("S", 0) for row in data if row["G"] != max_gate])
@@ -990,7 +990,10 @@ def compute_overall_race_metrics(sectionals: list,
         finish_time = sum([row.get("R", 0) for row in data if row["G"] == "Finish"]) or None
         final_2f_time = sum([row.get("S", 0) for row in data if (row["L"] / 201.16) <= 2.])
         final_2f_distance = sum([row.get("D", 0) for row in data if (row["L"] / 201.16) <= 2.])
-        finish_speed_perc = (final_2f_distance / final_2f_time) / (distance_ran / time)
+        if time > 0 and distance_ran > 0:
+            finish_speed_perc = (final_2f_distance / final_2f_time) / (distance_ran / time)
+        else:
+            finish_speed_perc = 1.
         metrics.append({
             "runner_sharecode": runner,
             "distance_ran": distance_ran,
