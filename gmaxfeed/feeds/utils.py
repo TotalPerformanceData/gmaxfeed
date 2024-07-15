@@ -854,7 +854,7 @@ def add_proportions(sectionals: list, inplace: bool = True) -> list:
             continue
         if 0 < sum(["N" in s for s in sections]) < len(sections):
             continue
-        if any([s["D"] == 0 for s in sections]):
+        if any([s.get("D", 0.) == 0 for s in sections]):
             continue
         for section in sections:
             section["prop_S"] = section["S"] / runner_final_times[runner]
