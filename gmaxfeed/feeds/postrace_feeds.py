@@ -67,6 +67,7 @@ from datetime import date as date_
 os.environ['FIXTURES_PATH'] = '/path/to/fixtures'
 os.environ['RACELIST_PATH'] = '/path/to/racelist'
 os.environ['SEC_PATH'] = '/path/to/sectionals'
+os.environ['SEC_FAST_PATH'] = '/path/to/sectionals-fast'
 os.environ['GPS_PATH'] = '/path/to/gpsData'
 os.environ['SEC_HIST_PATH'] = '/path/to/sectionals-hist'
 os.environ['SEC_RAW_PATH'] = '/path/to/sectionals-raw' #internal
@@ -363,7 +364,8 @@ class GmaxFeed:
                  licence: str = None,
                  fixtures_path: str = None,
                  racelist_path: str = None, 
-                 sectionals_path: str = None, 
+                 sectionals_path: str = None,
+                 sectionals_fast_path: str = None,
                  gps_path: str = None, 
                  route_path: str = None,
                  sectionals_history_path: str = None,
@@ -383,6 +385,8 @@ class GmaxFeed:
             path to racelist directory cache. The default is None.
         sectionals_path : str, optional
             path to sectionals directory cache. The default is None.
+        sectionals_fast_path : str, optional
+            path to sectionals-fast directory cache. The default is None.
         gps_path : str, optional
             path to post race GPS data directory cache.
             The default is None.
@@ -410,6 +414,7 @@ class GmaxFeed:
         self.set_gps_path(path = gps_path)
         self.set_route_path(path = route_path)
         self.set_sectionals_path(path = sectionals_path)
+        self.set_sectionals_fast_path(path = sectionals_fast_path)
         self.set_sectionals_history_path(path = sectionals_history_path)
         self.set_sectionals_raw_path(path = sectionals_raw_path)
         self.set_jumps_path(path = jumps_path)
@@ -451,6 +456,10 @@ class GmaxFeed:
     def set_sectionals_path(self, path: str = None) -> None:
         self._sectionals_path = path or os.environ.get('SEC_PATH') or 'sectionals'
         self._confirm_exists(self._sectionals_path)
+    
+    def set_sectionals_fast_path(self, path: str = None) -> None:
+        self._sectionals_fast_path = path or os.environ.get('SEC_FAST_PATH') or 'sectionals-fast'
+        self._confirm_exists(self._sectionals_fast_path)
     
     def set_gps_path(self, path: str = None) -> None:
         self._gps_path = path or os.environ.get('GPS_PATH') or 'gpsData'
@@ -846,6 +855,65 @@ class GmaxFeed:
             data = alter_sectionals_gate_label(sectionals = data)
         return {'sc': sharecode, 'data': data}
     
+    def get_sectionals_fast(self, sharecode: str, **kwargs) -> dict:
+        """
+        get fast post race sectional data for an iterable of sharecodes.
+        pre-published data available immediately after the race finish
+        when the official times are supplied to Gmax.
+
+        Parameters
+        ----------
+        sharecode : str
+            Gmax/TPD sharecode/race_id.
+        
+        **params
+        new : bool, optional
+            whether to force download a new file.
+            The default is False.
+        offline : bool, optional
+            whether to treat request without internet connection.
+            The default is False.
+        no_return : bool, optional
+            return None from target funcs, save memory when just updating files.
+            The default is False.
+
+        Returns
+        -------
+        dict
+        """
+        new = kwargs.get("new")
+        offline = kwargs.get("offline")
+        no_return = kwargs.get("no_return")
+        data = None
+        if not new:
+            if no_return:
+                data = check_file_exists(
+                    direc = self._sectionals_fast_path,
+                    fname = sharecode
+                    )
+            else:
+                data = load_file(direc = self._sectionals_fast_path, fname = sharecode)
+            if data is not None:
+                if not no_return and sharecode[:2] in METRIC_GATES:
+                    data = alter_sectionals_gate_label(sectionals = data)
+                return {'sc': sharecode, 'data': data}
+        if not offline:
+            url = 'https://www.gmaxequine.com/TPD/client/sectionals-fast.ashx?Sharecode={0}&k={1}'.format(
+                sharecode, self.licence
+                )
+            # returns a list of dicts
+            data = process_url_response(
+                url = url,
+                direc = self._sectionals_fast_path,
+                fname = sharecode,
+                version = 1
+                )
+        if no_return:
+            data = None
+        if data and sharecode[:2] in METRIC_GATES:
+            data = alter_sectionals_gate_label(sectionals = data)
+        return {'sc': sharecode, 'data': data}
+
     def get_sectionals_history(self, sharecode: str, **kwargs) -> dict:
         """
         get sectionals history feed for an iterable of sharecodes.
@@ -905,7 +973,7 @@ class GmaxFeed:
         if data and sharecode[:2] in METRIC_GATES:
             data = alter_sectionals_gate_label(sectionals = data)
         return {'sc': sharecode, 'data': data}
-    
+
     def get_sectionals_raw(self, sharecode: str, **kwargs) -> dict:
         """
         get sectionals raw feed for an iterable of sharecodes.
@@ -972,7 +1040,7 @@ class GmaxFeed:
         if data and sharecode[:2] in METRIC_GATES:
             data = alter_sectionals_gate_label(sectionals = data)
         return {'sc': sharecode, 'data': data}
-    
+
     def get_sectionals_modified(self,
                                 dt: str or datetime,
                                 **kwargs
@@ -1365,7 +1433,7 @@ class GmaxFeed:
             if filter is None:
                 filter = RaceMetadata()
                 if all([x not in request for x in [
-                        'sectionals-raw', 'sectionals-history', 'points', 'obstacles']
+                        'sectionals-raw', 'sectionals-history', 'sectionals', 'points', 'obstacles']
                         ]):
                     filter.set_filter(published = True)
             filter.apply_filter(data = sharecodes)
@@ -1376,6 +1444,7 @@ class GmaxFeed:
             "sectionals": self.get_sectionals,
             "sectionals-raw": self.get_sectionals_raw,
             "sectionals-history": self.get_sectionals_history,
+            "sectionals-fast": self.get_sectionals_fast,
             "points": self.get_points,
             "obstacles": self.get_obstacles,
             "performance": self.get_tracker_performance
