@@ -1428,7 +1428,7 @@ class GmaxFeed:
         -------
         dict
         """
-        output = {}
+        output = {r: {} for r in request}
         if type(sharecodes) is dict:
             if filter is None:
                 filter = RaceMetadata()
