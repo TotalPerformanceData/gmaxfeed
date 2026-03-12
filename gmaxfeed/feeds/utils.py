@@ -937,6 +937,7 @@ def validate_sectionals(data: list,
 def compute_overall_race_metrics(sectionals: list,
                                  race_length: float = None,
                                  ignore_first: bool = True,
+                                 use_average_distance_ran: bool = False,
                                  func = None
                                  ) -> list:
     """
@@ -954,6 +955,12 @@ def compute_overall_race_metrics(sectionals: list,
     ignore_first : bool
         whether to ignore the opening section when computing the stride data.
         The default is True.
+    use_average_distance_ran : bool,
+        whether to use the average distance ran for all of the horses
+        in the figures to reduce the severity of individual tracking errors
+        but maintain an estimate of the race length taken for this race compared
+        to other races (due to rail movements or whatever else)
+        The default is False
     func : function
         optional additional custom smoothing/processing function to apply to 
         sectionals. not inplace.
@@ -980,6 +987,7 @@ def compute_overall_race_metrics(sectionals: list,
     for runner in runners:
         data = [row for row in sectionals if row["I"] == runner]
         if ignore_first and len(data) > 1:
+            total_distance_ran = sum([row.get("D", 0) for row in data])
             distance_ran = sum([row.get("D", 0) for row in data if row["G"] != max_gate])
             number_strides = sum([row.get("N", 0) for row in data if row["G"] != max_gate])
             time = sum([row.get("S", 0) for row in data if row["G"] != max_gate])
@@ -987,6 +995,7 @@ def compute_overall_race_metrics(sectionals: list,
             distance_ran = sum([row.get("D", 0) for row in data])
             number_strides = sum([row.get("N", 0) for row in data])
             time = sum([row.get("S", 0) for row in data])
+            total_distance_ran = distance_ran
         finish_time = sum([row.get("R", 0) for row in data if row["G"] == "Finish"]) or None
         final_2f_time = sum([row.get("S", 0) for row in data if (row["L"] / 201.16) <= 2.])
         final_2f_distance = sum([row.get("D", 0) for row in data if (row["L"] / 201.16) <= 2.])
@@ -996,7 +1005,7 @@ def compute_overall_race_metrics(sectionals: list,
             finish_speed_perc = 1.
         metrics.append({
             "runner_sharecode": runner,
-            "distance_ran": distance_ran,
+            "distance_ran": total_distance_ran, # note not always the same as used for SL, if ignore_first is true
             "number_strides": number_strides if number_strides > 0 else None,
             "time": time if time else None,
             "stride_length": distance_ran / number_strides if number_strides > 0 else None,
@@ -1007,6 +1016,14 @@ def compute_overall_race_metrics(sectionals: list,
             "finish_speed_percentage": finish_speed_perc,
             "time_behind": finish_time - min_time if finish_time and min_time else None
             })
+    if use_average_distance_ran and metrics:
+        average_distance_ran = np.mean(
+            [row["distance_ran"] for row in metrics if row["finish_time"]]
+        )
+        for row in metrics:
+            row["distance_ran"] = average_distance_ran
+            if not ignore_first and row["number_strides"]:
+                row["stride_length"] = average_distance_ran / row["number_strides"]
     return metrics
 
 def estimate_off_time(sharecodes: list, gmax_feed) -> dict:
