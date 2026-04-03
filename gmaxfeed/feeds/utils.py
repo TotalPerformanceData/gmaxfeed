@@ -210,7 +210,7 @@ def get_race_details(racetype: str, racecourse: str = None) -> dict:
     surface = None
     if "Turf" in racetype or any([x in lower_racetype for x in ["hurdle", "chase"]]):
         surface = "Turf"
-    elif any([x in lower_racetype for x in ["allweather", "all weather", "all-weather", "polytrack", "tapeta", "fibresand"]]) or \
+    elif any([x in lower_racetype for x in ["allweather", "all weather", "all-weather", "polytrack", "tapeta", "fibresand", "synthetic"]]) or \
          any([x in racetype for x in ["AW", "PT", "FS"]]):
         surface = "AW"
     elif "Dirt" in racetype:
