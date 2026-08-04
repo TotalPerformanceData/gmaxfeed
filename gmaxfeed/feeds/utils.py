@@ -834,6 +834,7 @@ def add_proportions(sectionals: list, inplace: bool = True) -> list:
     runners = {}
     runner_final_times = {}
     runner_final_strides = {}
+    section_distances = {}
     if not inplace:
         sectionals = deepcopy(sectionals)
     for row in sectionals:
@@ -849,6 +850,24 @@ def add_proportions(sectionals: list, inplace: bool = True) -> list:
             if row.get("N"):
                 row["SF"] = row["N"] / row["S"]
                 row["SL"] = row["D"] / row["N"]
+        # gather valid distances for the race-level section mean.
+        try:
+            distance_ran = float(row.get("D"))
+        except (TypeError, ValueError):
+            distance_ran = np.nan
+        if np.isfinite(distance_ran) and distance_ran > 20:
+            section_distances.setdefault(row["G"], []).append(distance_ran)
+
+    section_mean_distances = {
+        gate: float(np.mean(distances))
+        for gate, distances in section_distances.items()
+    }
+    for row in sectionals:
+        row["race_mean_D"] = section_mean_distances.get(
+            row["G"],
+            np.nan,
+        )
+    
     for runner, sections in runners.items():
         if runner not in runner_final_times:
             continue
