@@ -811,25 +811,19 @@ def group_sectionals_to_1f(sectionals: list) -> list:
 
 def add_proportions(sectionals: list, inplace: bool = True) -> list:
     """
-    add proportion of time/strides that each runner spends in each section, 
-    compared to that runner's final time and number of strides.
-    
-    sectionals should be validated as complete for each runner, and no 
-    repeated sections.
-    
-    sectionals are actually edited in place, unless specified inplace = False.
+    Add the proportion of time/strides that each runner spends in each
+    section compared with that runner's total race time and strides.
 
-    Parameters
-    ----------
-    sectionals : list
-        list of all gmax runner sectionals for some race, not nested, as records.
-    inplace : bool
-        if true, sectionals are altered inplace, else copy is returned.
+    Also adds:
+        race_median_D
+            Median valid distance ran in that section across the race.
 
-    Returns
-    -------
-    list
-        sectionals as given, with proportions fields 'prop_S' and 'prop_N' added.
+        finish_speed_percentage
+            Average speed from the start of the current section to the finish,
+            expressed as a percentage of the runner's whole-race average speed.
+
+    Section distances used for finish-speed percentages are race_median_D,
+    rather than each runner's raw D.
     """
     runners = {}
     runner_final_times = {}
@@ -838,6 +832,7 @@ def add_proportions(sectionals: list, inplace: bool = True) -> list:
     if not inplace:
         sectionals = deepcopy(sectionals)
     for row in sectionals:
+        row["finish_speed_percentage"] = np.nan
         if row["I"] not in runners:
             runners[row["I"]] = []
             runner_final_strides[row["I"]] = 0
@@ -845,40 +840,122 @@ def add_proportions(sectionals: list, inplace: bool = True) -> list:
         runner_final_strides[row["I"]] += row.get("N", 0)
         if row["G"] == "Finish":
             runner_final_times[row["I"]] = row["R"]
+
         if row.get("D") and row.get("S"):
             row["V"] = row["D"] / row["S"]
             if row.get("N"):
                 row["SF"] = row["N"] / row["S"]
                 row["SL"] = row["D"] / row["N"]
-        # gather valid distances for the race-level section mean.
+
         try:
             distance_ran = float(row.get("D"))
         except (TypeError, ValueError):
             distance_ran = np.nan
-        if np.isfinite(distance_ran) and distance_ran > 20:
-            section_distances.setdefault(row["G"], []).append(distance_ran)
 
-    section_mean_distances = {
-        gate: float(np.mean(distances))
+        # Exclude zero, malformed and implausibly short section distances.
+        if np.isfinite(distance_ran) and distance_ran > 20:
+            section_distances.setdefault(
+                row["G"],
+                [],
+            ).append(distance_ran)
+
+    section_median_distances = {
+        gate: float(np.median(distances))
         for gate, distances in section_distances.items()
     }
     for row in sectionals:
-        row["race_mean_D"] = section_mean_distances.get(
+        row["race_median_D"] = section_median_distances.get(
             row["G"],
             np.nan,
         )
-    
+    expected_gates = set(section_median_distances)
     for runner, sections in runners.items():
         if runner not in runner_final_times:
+            # Non-finisher: prop_S and finish speed percentages remain absent/NaN.
             continue
-        if 0 < sum(["N" in s for s in sections]) < len(sections):
-            continue
-        if any([s.get("D", 0.) == 0 for s in sections]):
-            continue
+
+        has_complete_stride_data = all(
+            "N" in section
+            for section in sections
+        )
         for section in sections:
-            section["prop_S"] = section["S"] / runner_final_times[runner]
-            if runner_final_strides[runner]:
-                section["prop_N"] = section["N"] / runner_final_strides[runner]
+            section["prop_S"] = (
+                section["S"] / runner_final_times[runner]
+            )
+            if (
+                has_complete_stride_data
+                and runner_final_strides[runner]
+            ):
+                section["prop_N"] = (
+                    section["N"]
+                    / runner_final_strides[runner]
+                )
+
+        # Do not calculate FSP when the runner is missing one of the race's
+        # sections or when a section has no valid race median distance.
+        runner_gates = {
+            section.get("G")
+            for section in sections
+        }
+        if runner_gates != expected_gates:
+            continue
+        ordered_sections = sorted(
+            sections,
+            key=lambda section: section["L"],
+            reverse=True,
+        )
+        try:
+            section_times = [
+                float(section["S"])
+                for section in ordered_sections
+            ]
+
+            median_distances = [
+                float(section["race_median_D"])
+                for section in ordered_sections
+            ]
+        except (KeyError, TypeError, ValueError):
+            continue
+
+        if (
+            any(
+                not np.isfinite(value) or value <= 0
+                for value in section_times
+            )
+            or any(
+                not np.isfinite(value) or value <= 0
+                for value in median_distances
+            )
+        ):
+            continue
+
+        total_time = sum(section_times)
+        total_distance = sum(median_distances)
+        whole_race_speed = total_distance / total_time
+        distance_to_finish = 0.0
+        time_to_finish = 0.0
+        for section, section_time, section_distance in reversed(
+            list(
+                zip(
+                    ordered_sections,
+                    section_times,
+                    median_distances,
+                )
+            )
+        ):
+            distance_to_finish += section_distance
+            time_to_finish += section_time
+
+            speed_to_finish = (
+                distance_to_finish / time_to_finish
+            )
+
+            section["finish_speed_percentage"] = (
+                100.0
+                * speed_to_finish
+                / whole_race_speed
+            )
+
     return sectionals
 
 def validate_sectionals(data: list,
